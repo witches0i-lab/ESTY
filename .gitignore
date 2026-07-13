@@ -1,0 +1,14 @@
+.DS_Store
+node_modules/
+dist/
+out/
+*.log
+.vscode/
+.idea/
+
+# generated planner PDFs are large (~17MB each) and fully reproducible
+# via `npm run build`; the hyperlinked source HTML is committed instead.
+# (guide PDFs are small and are committed.)
+export/*/goyo-najeon.pdf
+export/*/goyo-light.pdf
+export/*/goyo-hanji.pdf

@@ -1,0 +1,225 @@
+/* =========================================================================
+   GOYO — BASE LAYOUT / DESIGN SYSTEM
+   To make a variation, change ONLY the tokens in :root below.
+   (palette + fonts are fully tokenised; layout stays intact)
+   ========================================================================= */
+
+
+/* ---- workspace (outside the page; ignored on export) -------------------- */
+*{box-sizing:border-box;}
+body{margin:0;background:#0c0e0f;font-family:var(--sans);color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;gap:0;padding:60px 20px 120px;}
+.flabel{width:var(--pw);margin:34px auto 8px;color:#5f6b6f;font-size:13px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:500;}
+.flabel span{color:var(--accent);}
+
+
+/* ---- page frame --------------------------------------------------------- */
+.page{width:var(--pw);height:var(--ph);background:var(--bg);position:relative;overflow:hidden;flex:none;}
+.content{position:absolute;top:var(--tabh);left:0;right:var(--rail);bottom:0;
+  padding:var(--pad);display:flex;flex-direction:column;}
+
+/* nav anchors inherit page styling (no default link colour/underline) */
+a.tab,a.rm,a.ix-row,a.dnum,.dsub a{color:inherit;text-decoration:none;}
+a.dnum:hover,.dsub a:hover{color:var(--accent);}
+/* ---- chrome: top tabs --------------------------------------------------- */
+.tabs{position:absolute;top:0;left:0;right:var(--rail);height:var(--tabh);
+  display:flex;align-items:center;border-bottom:1px solid var(--hair);}
+.tab{flex:1;position:relative;display:flex;align-items:center;justify-content:center;
+  height:100%;font-size:14px;letter-spacing:.05em;color:var(--muted);}
+.tab.on{color:var(--accent);font-weight:600;}
+.tab.on::after{content:"";position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+  width:22px;height:2px;border-radius:2px;background:var(--accent);}
+/* ---- chrome: right month rail ------------------------------------------ */
+.rail{position:absolute;top:0;right:0;width:var(--rail);bottom:0;display:flex;
+  flex-direction:column;border-left:1px solid var(--hair);}
+.rm{flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;
+  letter-spacing:.16em;color:var(--faint);border-bottom:1px solid var(--hair);
+  writing-mode:vertical-rl;text-orientation:sideways;}
+.rm.on{color:var(--accent);background:var(--rail-on-bg);font-weight:600;}
+/* ---- chrome: najeon seal ----------------------------------------------- */
+.seal{display:flex;margin-bottom:18px;}
+.seal svg{height:13px;width:auto;}
+
+/* ---- shared components -------------------------------------------------- */
+.eyebrow{font-size:var(--t-label);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--accent);}
+.eyebrow a{color:inherit;text-decoration:none;}
+.eyebrow a:hover{color:var(--ink);}
+.h1{font-family:var(--serif);font-weight:300;font-size:var(--t-h1);color:var(--ink);margin:8px 0 0;line-height:1;}
+.h1 em{font-style:italic;color:var(--accent);}
+.phead{display:flex;justify-content:space-between;align-items:flex-end;}
+.pmeta{font-size:var(--t-meta);letter-spacing:.06em;color:var(--muted);text-align:right;line-height:1.8;}
+.hr{height:1px;background:var(--hair);}
+.hr.pink{background:var(--accent2);opacity:.5;}
+.hr.white{background:var(--ink);opacity:.55;}
+.hr.spaced{margin:18px 0 4px;}
+.lbl{font-size:var(--t-label);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
+.sec{font-size:var(--t-label);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--accent);
+  border-bottom:1px solid var(--accent-line);padding-bottom:9px;margin:22px 0 2px;}
+.box{border:1px solid var(--hair);border-radius:9px;margin-top:10px;}
+.row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--hair);}
+.row .k{font-size:var(--t-label);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);width:64px;flex:none;}
+.row .v{flex:1;display:flex;justify-content:flex-end;align-items:center;gap:8px;}
+.fill{flex:1;border-bottom:1px solid var(--line);}
+
+/* daily left column — brighter labels for readability (was too dim on dark) */
+.dcol-l .lbl{color:var(--ink);opacity:.92;}
+.dcol-l .row .k,.dcol-l .nf .k{color:var(--ink);opacity:.88;}
+.wxr svg{stroke:var(--ink);opacity:.78;}
+/* mood scale: Google Material Symbols sentiment faces, buyer circles one */
+.moods{display:flex;gap:12px;align-items:center;}
+.moodface{width:31px;height:31px;fill:var(--ink);opacity:.9;}
+
+/* ============ COVER ============ */
+.cover{height:100%;padding:74px 84px 80px;display:flex;flex-direction:column;
+  background:radial-gradient(120% 80% at 50% 30%,#16191b 0%,#0c0e0f 60%,#080909 100%);}
+.cover-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.cover-eye{font-size:16px;letter-spacing:.42em;text-transform:uppercase;color:var(--faint);}
+.cover-year{font-family:var(--serif);font-style:italic;font-weight:300;font-size:21px;color:var(--accent);}
+.med-wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;margin:26px 0 10px;}
+.med-glow{position:absolute;width:700px;height:700px;border-radius:50%;
+  background:radial-gradient(circle,rgba(214,184,142,.16),rgba(116,168,159,.05) 46%,transparent 70%);filter:blur(12px);}
+.medallion{position:relative;width:690px;height:690px;}
+.med-swap{display:none;width:690px;height:690px;}
+.cover-foot{display:flex;flex-direction:column;align-items:center;}
+.wordmark{font-family:var(--serif);font-weight:300;font-size:56px;letter-spacing:.36em;color:var(--ink);padding-left:.36em;}
+.tagline{font-family:var(--serif);font-style:italic;font-weight:400;font-size:25px;color:var(--accent);margin-top:14px;}
+.cover-rule{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:46px;
+  border-top:1px solid var(--hair);padding-top:24px;font-size:15px;color:var(--faint);letter-spacing:.07em;}
+
+/* ============ INDEX ============ */
+.ix-sub{font-size:14px;color:var(--muted);margin-top:12px;}
+.ix-list{margin-top:30px;}
+.ix-row{display:flex;align-items:baseline;gap:18px;padding:20px 2px;border-bottom:1px solid var(--hair);}
+.ix-n{font-family:var(--serif);font-style:italic;font-size:18px;color:var(--accent);width:36px;flex:none;}
+.ix-name{font-size:20px;color:var(--ink);}
+.ix-lead{flex:1;}
+.ix-meta{font-size:var(--t-label);letter-spacing:.1em;color:var(--faint);}
+
+/* ============ MONTHLY ============ */
+.cal{margin-top:22px;display:grid;grid-template-columns:repeat(7,1fr);
+  border-top:1px solid var(--hair);border-left:1px solid var(--hair);}
+.cal .dw{padding:11px 0;text-align:center;font-size:var(--t-label);letter-spacing:.14em;color:var(--faint);
+  text-transform:uppercase;border-bottom:1px solid var(--hair);border-right:1px solid var(--hair);}
+.cal .cell{height:140px;padding:11px 12px;font-size:14px;color:var(--muted);
+  border-bottom:1px solid var(--hair);border-right:1px solid var(--hair);}
+.cal .cell.dim{color:var(--faint);opacity:.4;}
+.m-single{margin-top:10px;display:flex;align-items:baseline;gap:16px;}
+.m-single .lbl{flex:none;}
+.m-single .ln{flex:1;height:1px;background:var(--hair);}
+.cal + .m-single{margin-top:32px;}      /* Intention: separates from the calendar above */
+.m-single + .m-single{margin-bottom:32px;}  /* Focus: separates from the section below */
+.m-foot{margin-top:22px;flex:1;display:grid;grid-template-columns:1.7fr 1fr;gap:var(--gap);}
+.m-col{display:flex;flex-direction:column;}
+.m-col .lbl{margin-bottom:14px;}
+.m-col .lines{flex:1;border-top:1px solid var(--hair);
+  background-image:linear-gradient(to bottom,transparent 33px,var(--hair) 33px,var(--hair) 34px);
+  background-size:100% 34px;background-repeat:repeat;}
+
+/* ============ WEEKLY ============ */
+.wk{margin-top:20px;flex:1;display:grid;grid-template-columns:repeat(7,1fr);
+  border-top:1px solid var(--hair);border-left:1px solid var(--hair);}
+.wk .col{border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);display:flex;flex-direction:column;}
+.wk .ch{padding:12px 12px 10px;border-bottom:1px solid var(--hair);}
+.wk .cw{font-size:var(--t-label);letter-spacing:.12em;color:var(--faint);text-transform:uppercase;}
+.wk .cd{font-family:var(--serif);font-size:24px;color:var(--ink);margin-top:2px;}
+.wk .cl{flex:1;background-image:linear-gradient(to bottom,transparent 37px,var(--hair) 37px,var(--hair) 38px);
+  background-size:100% 38px;background-repeat:repeat;}
+
+/* ============ DAILY ============ */
+.dtop{display:flex;align-items:flex-start;gap:22px;}
+.dnum{font-family:var(--serif);font-weight:300;font-size:var(--t-num);line-height:.85;color:var(--ink);}
+.dstrip{flex:1;display:flex;flex-wrap:wrap;gap:8px 9px;padding-top:16px;padding-left:220px;}
+.dstrip span{font-size:13px;color:var(--faint);min-width:20px;height:20px;line-height:20px;text-align:center;}
+.dstrip span.on{color:var(--bg);background:var(--accent);border-radius:50%;font-weight:600;}
+.dsub{display:flex;align-items:center;gap:16px;margin-top:6px;}
+.dsub .mo{font-family:var(--serif);font-style:italic;font-size:28px;color:var(--accent);}
+.dowp{display:flex;gap:6px;border:1px solid var(--line);border-radius:999px;padding:7px 14px;}
+.dowp b{font-weight:400;font-size:12px;color:var(--faint);letter-spacing:.05em;width:15px;text-align:center;}
+.dowp b.on{color:var(--accent);font-weight:700;}
+.dcols{display:grid;grid-template-columns:0.84fr 1.16fr;gap:32px;margin-top:24px;align-items:stretch;flex:1;}
+.dcol-l{display:flex;flex-direction:column;}
+.dcol-r{display:flex;}
+.wxr{display:flex;gap:20px;margin-top:11px;}
+.wxr svg{width:24px;height:24px;stroke:var(--muted);}
+.face{width:23px;height:23px;border-radius:50%;border:1px solid var(--accent-line);
+  display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--faint);}
+.face.on{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+.ebar{display:flex;gap:5px;align-items:flex-end;height:24px;}
+.ebar i{width:9px;background:var(--accent-deep);border-radius:2px;}
+.ebar i.on{background:var(--accent);}
+.cup{width:18px;height:21px;}
+.cup .glass{fill:none;stroke:var(--accent);stroke-width:1.3;stroke-linejoin:round;}
+.cup .water{fill:var(--accent);opacity:.38;}
+.hrs{font-size:12px;color:var(--faint);letter-spacing:.06em;}
+.nf{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--hair);}
+.nf .k{font-size:12px;color:var(--muted);width:84px;letter-spacing:.03em;}
+.nf-total{margin-top:2px;border-top:1px solid var(--line);border-bottom:none;}
+.nf-total .k{color:var(--ink);font-weight:600;letter-spacing:.05em;}
+.journal{flex:1;border:1px solid var(--hair);border-radius:11px;
+  /* background-size tiling (not repeating-linear-gradient): Chrome's
+     print-to-PDF mis-tiles a repeating gradient on tall boxes, leaving the
+     lower half blank. A single-line gradient tiled via background-size
+     renders every rule reliably in the PDF. */
+  background-image:linear-gradient(to bottom,transparent 43px,var(--hair) 43px,var(--hair) 44px);
+  background-size:100% 44px;background-repeat:repeat;background-position:0 16px;}
+
+/* daily v2 — writing-first: left = morning + wellbeing, right = pages, night below */
+.dwk{display:flex;gap:20px;margin-top:22px;margin-bottom:14px;padding-left:2px;}
+.dwk span{font-size:11px;letter-spacing:.16em;color:var(--faint);width:14px;text-align:center;}
+.sec.dph{margin-top:26px;}
+.sec.dph.dph-lg{margin-top:48px;}
+.dcol-l .sec.dph:first-child{margin-top:0;}
+.journal.dj{flex:1;margin-top:0;min-height:480px;}
+.gr3{margin-top:8px;}
+.gr3 .ln{height:1px;background:var(--grat-line);opacity:.55;margin-top:42px;}
+
+/* ============ HABITS ============ */
+.hb{margin-top:22px;border-top:1px solid var(--hair);}
+.hb-row{display:grid;grid-template-columns:220px 1fr;border-bottom:1px solid var(--hair);}
+.hb-name{padding:16px 0;font-size:16px;color:var(--ink);border-right:1px solid var(--hair);display:flex;align-items:center;}
+.hb-name.head{font-size:var(--t-label);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;}
+.hb-days{display:grid;grid-template-columns:repeat(31,1fr);}
+.hb-c{display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--faint);padding:16px 0;}
+.hb-c .o{width:11px;height:11px;border-radius:50%;border:1px solid var(--accent-line);}
+.hb-c .o.f{background:var(--accent);border-color:var(--accent);}
+.hb-foot{margin-top:auto;padding-top:20px;font-size:var(--t-label);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);}
+.hb-fill{flex:1;margin-top:14px;border:1px solid var(--hair);border-radius:11px;
+  background-image:linear-gradient(to bottom,transparent 41px,var(--hair) 41px,var(--hair) 42px);
+  background-size:100% 42px;background-repeat:repeat;background-position:0 14px;}
+
+/* clickable calendar day cells + date-strip days (link to daily pages) */
+.cal a.cell{display:block;text-decoration:none;color:var(--muted);}
+.cal a.cell:hover{background:var(--surface);color:var(--accent);}
+.dstrip a{font-size:13px;color:var(--faint);min-width:20px;height:20px;line-height:20px;
+  text-align:center;text-decoration:none;}
+.dstrip a.on{color:var(--bg);background:var(--accent);border-radius:50%;font-weight:600;}
+.dstrip a:hover{color:var(--accent);}
+
+/* ============ YEAR AT A GLANCE ============ */
+.yag{margin-top:26px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;flex:1;}
+.ycard{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:11px;padding:16px 16px 18px;}
+.ycard:hover{border-color:var(--accent);}
+.ycard .ym{font-family:var(--serif);font-style:italic;font-size:22px;color:var(--ink);text-decoration:none;}
+.ycard .ynotes{align-self:flex-start;margin-top:9px;padding:5px 13px;border:1px solid var(--accent-line);
+  border-radius:999px;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+  text-decoration:none;}
+.ycard .ynotes:hover{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.ycard .yg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px 2px;margin-top:auto;
+  text-decoration:none;}
+.ycard .yg i{font-size:10px;color:var(--muted);text-align:center;font-style:normal;}
+
+/* ============ GRATITUDE LOG ============ */
+.grat{margin-top:24px;flex:1;display:flex;flex-direction:column;}
+.grat a.gr{flex:1;display:flex;align-items:baseline;gap:18px;padding:18px 2px;border-bottom:1px solid var(--hair);
+  text-decoration:none;}
+.grat a.gr:hover .gr-mo{color:var(--accent);}
+.grat .gr-mo{font-family:var(--serif);font-style:italic;font-size:20px;color:var(--ink);width:140px;flex:none;}
+
+/* ============ NOTES ============ */
+.ptabs{margin-top:20px;display:flex;gap:10px;}
+.ptab{padding:9px 20px;border:1px solid var(--hair);border-radius:999px;font-size:13px;color:var(--muted);letter-spacing:.04em;}
+.ptab.on{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600;}
+.nt{margin-top:18px;flex:1;border:1px solid var(--hair);border-radius:11px;
+  background-image:radial-gradient(var(--line) 1.2px,transparent 1.2px);background-size:32px 32px;background-position:14px 14px;}

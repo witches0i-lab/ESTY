@@ -1,0 +1,27 @@
+/* GOYO theme — Light "pink + cyan". Link AFTER css/tokens.css to apply.
+   Palette keyed to #FFFFFF (base), #FFD5E8 (pink, primary), #C6FAFF (cyan,
+   secondary). Only this file changes — najeon is the untouched base. */
+:root{
+  --bg:#fff8fb; --surface:#ffffff; --line:#f0dfe7; --hair:#f7ecf1;
+  --ink:#3a3a3c; --muted:#9a8f95; --faint:#c2b4bb;
+  /* primary = pink (#FFD5E8) */
+  --accent:#e493b5; --accent-deep:#ffd5e8; --accent-line:#f6d3e1;
+  /* secondary = cyan (#C6FAFF) */
+  --accent2:#6cc3d4; --accent2-line:rgba(120,200,216,.45); --accent2-fill:rgba(198,250,255,.30);
+  /* "Grateful for" box: kept tone-on-tone pink instead of the cyan secondary */
+  --grat-c:#c97a9e; --grat-line:rgba(228,147,181,.40); --grat-fill:rgba(255,213,232,.28);
+  /* month rail active bg: pure white stood out too much — soften to pale pink */
+  --rail-on-bg:#fbe4ee;
+}
+
+/* seal: recolour najeon's celadon→pink, pink→cyan (CSS beats the SVG fill attr) */
+.seal svg ellipse:nth-of-type(1){fill:var(--accent);}
+.seal svg ellipse:nth-of-type(2){fill:var(--accent2);}
+
+/* cover (pink glass on white, cyan italics) */
+.cover{background:radial-gradient(122% 82% at 50% 30%,#ffffff 0%,#fff4f9 60%,#ffe9f2 100%);}
+.med-glow{background:radial-gradient(circle,rgba(255,170,205,.22),rgba(198,250,255,.10) 46%,transparent 70%);}
+.wordmark{color:#3a3a3c;}
+.cover-eye,.cover-rule{color:#9a8f95;}
+.cover-year,.tagline{color:#4fa9bd;}
+.cover-rule{border-top-color:#f0dfe7;}

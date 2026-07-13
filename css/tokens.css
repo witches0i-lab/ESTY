@@ -1,0 +1,75 @@
+/* ============================================================
+   GOYO — Design Tokens (single source of truth)
+   This is the design system. Change a variation by editing
+   ONLY this file; index.html and every page inherit it.
+   ============================================================ */
+:root{
+  /* ---- palette ---------------------------------------------------------- */
+  --bg:#14181a;          /* page base (dark ink)            */
+  --surface:#1b2225;     /* raised panels                   */
+  --line:#2c363a;        /* visible borders                 */
+  --hair:#232c30;        /* hairline separators             */
+  --ink:#e9e6df;         /* primary text                    */
+  --muted:#8a9499;       /* secondary text / labels         */
+  --faint:#5f6b6f;       /* tertiary text                   */
+  --accent:#74a89f;      /* PRIMARY accent  (celadon)       */
+  --accent-deep:#3c4f4c;
+  --accent-line:#33423f;
+  --accent2:#e6bcc7;     /* SECONDARY accent (najeon pink)  */
+  --accent2-line:rgba(230,188,199,.40);
+  --accent2-fill:rgba(230,188,199,.05);
+  --moon:#efe4cf;
+  /* "Grateful for" box (daily page) — defaults to the secondary accent;
+     themes may override independently (e.g. light keeps it pink tone-on-tone
+     even when --accent2 elsewhere is a different hue). */
+  --grat-c:var(--accent2);
+  --grat-line:var(--accent2-line);
+  --grat-fill:var(--accent2-fill);
+  /* month rail — active month background; defaults to --surface, themes
+     may soften it independently (e.g. light uses a pale pink, not white) */
+  --rail-on-bg:var(--surface);
+
+  /* ---- type ------------------------------------------------------------- */
+  --serif:'Bodoni Moda',Georgia,serif;  /* display only      */
+  --sans:'Inter',system-ui,sans-serif;  /* everything else   */
+  --t-num:60px;          /* focal numeral / month           */
+  --t-h1:38px;           /* page title                      */
+  --t-body:15px;
+  --t-label:11px;        /* uppercase micro-labels          */
+  --t-meta:12px;
+  --ls-label:.18em;      /* label letter-spacing            */
+
+  /* ---- spacing & frame -------------------------------------------------- */
+  --pad:44px;            /* body padding                    */
+  --gap:22px;
+  --pw:1080px; --ph:1440px;   /* page size (GoodNotes/Notability portrait) */
+  --rail:40px;           /* right month-rail width          */
+  --tabh:64px;           /* top tab-bar height              */
+}
+
+/* ------------------------------------------------------------------
+   VARIATION RECIPES — copy a block into a new themed stylesheet,
+   or override :root in a per-theme file. Layout never changes.
+   ------------------------------------------------------------------ */
+
+/* [Light / "paper"] ------------------------------------------------
+:root{
+  --bg:#f4f1ea; --surface:#ffffff; --line:#ddd6c8; --hair:#e7e1d4;
+  --ink:#2a2722; --muted:#7a756c; --faint:#a8a294;
+  --accent:#5f8c82; --accent-deep:#cfe0db; --accent-line:#d6e3df;
+  --accent2:#c98da0; --accent2-line:rgba(201,141,160,.40); --accent2-fill:rgba(201,141,160,.06);
+}
+*/
+
+/* [Warm / "hanji"] -------------------------------------------------
+:root{
+  --bg:#1a1714; --surface:#23201b; --line:#3a342c; --hair:#2c2823;
+  --ink:#efe7d8; --muted:#9c917f; --faint:#6e655a;
+  --accent:#c08a3e; --accent-deep:#4a3b22; --accent-line:#473b28;
+  --accent2:#a8c0b4; --accent2-line:rgba(168,192,180,.40); --accent2-fill:rgba(168,192,180,.05);
+}
+*/
+
+/* [Type swap] ------------------------------------------------------
+:root{ --serif:'Cormorant Garamond',serif; --sans:'Manrope',sans-serif; }
+*/

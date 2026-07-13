@@ -1,0 +1,18 @@
+<defs>
+          <clipPath id="discClip"><circle cx="380" cy="380" r="356"/></clipPath>
+          <radialGradient id="discGrad" cx="44%" cy="36%" r="78%">
+            <stop offset="0%" stop-color="#191d1f"/><stop offset="55%" stop-color="#0e1112"/><stop offset="100%" stop-color="#070809"/>
+          </radialGradient>
+          <radialGradient id="moonGrad" cx="40%" cy="36%" r="68%">
+            <stop offset="0%" stop-color="#fbf6ea"/><stop offset="46%" stop-color="#eee4cf"/>
+            <stop offset="80%" stop-color="#d6c6ac"/><stop offset="100%" stop-color="#b7b4c2"/>
+          </radialGradient>
+          <radialGradient id="rimGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="76%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(0,0,0,.55)"/>
+          </radialGradient>
+          <linearGradient id="ir1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c2e9df"/><stop offset="34%" stop-color="#f1c9d7"/><stop offset="67%" stop-color="#cfd6f1"/><stop offset="100%" stop-color="#ede3c3"/></linearGradient>
+          <linearGradient id="ir2" x1="1" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#dac5ed"/><stop offset="34%" stop-color="#c2e9df"/><stop offset="67%" stop-color="#f4cdda"/><stop offset="100%" stop-color="#cfe1eb"/></linearGradient>
+          <linearGradient id="ir3" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#f2cdd0"/><stop offset="34%" stop-color="#d6ebd1"/><stop offset="67%" stop-color="#c7d5f0"/><stop offset="100%" stop-color="#f0e1c7"/></linearGradient>
+          <linearGradient id="ir4" x1="0" y1="0" x2="1" y2="0.6"><stop offset="0%" stop-color="#cfece4"/><stop offset="34%" stop-color="#ead3ed"/><stop offset="67%" stop-color="#f1d9c5"/><stop offset="100%" stop-color="#c7dcef"/></linearGradient>
+          <linearGradient id="rimStroke" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e7d8bf"/><stop offset="50%" stop-color="#9fb8c4"/><stop offset="100%" stop-color="#d8c4d0"/></linearGradient>
+        </defs>

@@ -1,0 +1,19 @@
+<defs>
+  <clipPath id="discClip"><circle cx="380" cy="380" r="356"/></clipPath>
+  <radialGradient id="discGrad" cx="44%" cy="36%" r="80%">
+    <stop offset="0%" stop-color="#fbf1f4"/><stop offset="52%" stop-color="#f1dee5"/>
+    <stop offset="100%" stop-color="#e4c8d3"/>
+  </radialGradient>
+  <radialGradient id="moonGrad" cx="40%" cy="36%" r="70%">
+    <stop offset="0%" stop-color="#ffffff"/><stop offset="46%" stop-color="#fbeef1"/>
+    <stop offset="80%" stop-color="#f0d2dc"/><stop offset="100%" stop-color="#e2b6c6"/>
+  </radialGradient>
+  <radialGradient id="rimGlow" cx="50%" cy="50%" r="50%">
+    <stop offset="74%" stop-color="rgba(180,130,150,0)"/><stop offset="100%" stop-color="rgba(176,124,146,.20)"/>
+  </radialGradient>
+  <linearGradient id="ir1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f4a6c0"/><stop offset="34%" stop-color="#ffd6c2"/><stop offset="67%" stop-color="#bcd0f5"/><stop offset="100%" stop-color="#ecc6ec"/></linearGradient>
+  <linearGradient id="ir2" x1="1" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#d9b8f0"/><stop offset="34%" stop-color="#f7bcd2"/><stop offset="67%" stop-color="#ffe0d6"/><stop offset="100%" stop-color="#b9d4f6"/></linearGradient>
+  <linearGradient id="ir3" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#f9bcc8"/><stop offset="34%" stop-color="#f0c8ea"/><stop offset="67%" stop-color="#bcd0f5"/><stop offset="100%" stop-color="#ffe3c8"/></linearGradient>
+  <linearGradient id="ir4" x1="0" y1="0" x2="1" y2="0.6"><stop offset="0%" stop-color="#f2c2e0"/><stop offset="34%" stop-color="#f3b0c6"/><stop offset="67%" stop-color="#ffd2bb"/><stop offset="100%" stop-color="#c2c4f2"/></linearGradient>
+  <linearGradient id="rimStroke" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f0d6cf"/><stop offset="50%" stop-color="#b6a4cb"/><stop offset="100%" stop-color="#c8b0d6"/></linearGradient>
+</defs>

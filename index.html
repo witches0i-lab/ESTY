@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOYO — Wellness Journal (base layout)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+
+<!-- ===================== 01 COVER ===================== -->
+<div class="flabel">01 · <span>Cover</span></div>
+<div class="page" id="p-cover">
+  <div class="cover">
+    <div class="cover-top">
+      <div class="cover-eye">Wellness Journal</div>
+      <div class="cover-year">undated · reuse every year</div>
+    </div>
+    <div class="med-wrap">
+      <div class="med-glow"></div>
+      <svg class="medallion" id="medallion" viewBox="0 0 760 760" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="discClip"><circle cx="380" cy="380" r="356"/></clipPath>
+          <radialGradient id="discGrad" cx="44%" cy="36%" r="78%">
+            <stop offset="0%" stop-color="#191d1f"/><stop offset="55%" stop-color="#0e1112"/><stop offset="100%" stop-color="#070809"/>
+          </radialGradient>
+          <radialGradient id="moonGrad" cx="40%" cy="36%" r="68%">
+            <stop offset="0%" stop-color="#fbf6ea"/><stop offset="46%" stop-color="#eee4cf"/>
+            <stop offset="80%" stop-color="#d6c6ac"/><stop offset="100%" stop-color="#b7b4c2"/>
+          </radialGradient>
+          <radialGradient id="rimGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="76%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(0,0,0,.55)"/>
+          </radialGradient>
+          <linearGradient id="ir1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c2e9df"/><stop offset="34%" stop-color="#f1c9d7"/><stop offset="67%" stop-color="#cfd6f1"/><stop offset="100%" stop-color="#ede3c3"/></linearGradient>
+          <linearGradient id="ir2" x1="1" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#dac5ed"/><stop offset="34%" stop-color="#c2e9df"/><stop offset="67%" stop-color="#f4cdda"/><stop offset="100%" stop-color="#cfe1eb"/></linearGradient>
+          <linearGradient id="ir3" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#f2cdd0"/><stop offset="34%" stop-color="#d6ebd1"/><stop offset="67%" stop-color="#c7d5f0"/><stop offset="100%" stop-color="#f0e1c7"/></linearGradient>
+          <linearGradient id="ir4" x1="0" y1="0" x2="1" y2="0.6"><stop offset="0%" stop-color="#cfece4"/><stop offset="34%" stop-color="#ead3ed"/><stop offset="67%" stop-color="#f1d9c5"/><stop offset="100%" stop-color="#c7dcef"/></linearGradient>
+          <linearGradient id="rimStroke" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e7d8bf"/><stop offset="50%" stop-color="#9fb8c4"/><stop offset="100%" stop-color="#d8c4d0"/></linearGradient>
+        </defs>
+        <circle cx="380" cy="380" r="356" fill="url(#discGrad)"/>
+        <g clip-path="url(#discClip)" id="art"></g>
+        <circle cx="380" cy="380" r="356" fill="url(#rimGlow)" pointer-events="none"/>
+        <circle cx="380" cy="380" r="356" fill="none" stroke="url(#rimStroke)" stroke-width="2" opacity=".7"/>
+      </svg>
+      <div class="med-swap" aria-hidden="true"></div>
+    </div>
+    <div class="cover-foot">
+      <div class="wordmark">G O Y O</div>
+      <div class="tagline">a quiet daily ritual</div>
+      <div class="cover-rule"><span>STILLNESS, ONE PAGE AT A TIME</span><span>FOR GOODNOTES · NOTABILITY</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 02 YEAR (at a glance) ===================== -->
+<div class="flabel">02 · <span>Year</span></div>
+<div class="page" id="p-year">
+  <div class="tabs"><a class="tab on" href="#p-year">Year</a><a class="tab" href="#p-habits">Habits</a><a class="tab" href="#p-notes">Notes</a><a class="tab" href="#p-grat">Gratitude</a></div>
+  <div class="rail"><a class="rm" href="#p-monthly">JAN</a><a class="rm" href="#p-monthly">FEB</a><a class="rm" href="#p-monthly">MAR</a><a class="rm" href="#p-monthly">APR</a><a class="rm" href="#p-monthly">MAY</a><a class="rm" href="#p-monthly">JUN</a><a class="rm" href="#p-monthly">JUL</a><a class="rm" href="#p-monthly">AUG</a><a class="rm" href="#p-monthly">SEP</a><a class="rm" href="#p-monthly">OCT</a><a class="rm" href="#p-monthly">NOV</a><a class="rm" href="#p-monthly">DEC</a></div>
+  <div class="content">
+    <div class="seal"></div>
+    <div class="phead"><div><div class="eyebrow">At a glance</div><h1 class="h1">Your <em>year</em></h1></div>
+      <div class="pmeta">YEAR 20＿＿<br>TAP A MONTH TO BEGIN</div></div>
+    <div class="yag" id="yag"></div>
+  </div>
+</div>
+
+<!-- ===================== 03 MONTHLY ===================== -->
+<div class="flabel">03 · <span>Monthly</span></div>
+<div class="page" id="p-monthly">
+  <div class="tabs"><a class="tab" href="#p-year">Year</a><a class="tab" href="#p-habits">Habits</a><a class="tab" href="#p-notes">Notes</a><a class="tab" href="#p-grat">Gratitude</a></div>
+  <div class="rail"><a class="rm on" href="#p-monthly">JAN</a><a class="rm" href="#p-monthly">FEB</a><a class="rm" href="#p-monthly">MAR</a><a class="rm" href="#p-monthly">APR</a><a class="rm" href="#p-monthly">MAY</a><a class="rm" href="#p-monthly">JUN</a><a class="rm" href="#p-monthly">JUL</a><a class="rm" href="#p-monthly">AUG</a><a class="rm" href="#p-monthly">SEP</a><a class="rm" href="#p-monthly">OCT</a><a class="rm" href="#p-monthly">NOV</a><a class="rm" href="#p-monthly">DEC</a></div>
+  <div class="content">
+    <div class="seal"></div>
+    <div class="phead"><div><div class="eyebrow"><a href="#p-year">‹ Year</a> · Month 01 / 12</div><h1 class="h1">January</h1></div></div>
+    <div class="hr white spaced"></div>
+    <div class="cal" id="cal"></div>
+    <div class="m-single"><div class="lbl">Intention</div><div class="ln"></div></div>
+    <div class="m-single"><div class="lbl">Focus</div><div class="ln"></div></div>
+    <div class="m-foot">
+      <div class="m-col"><div class="lbl">This month I want to feel</div><div class="lines"></div></div>
+      <div class="m-col"><div class="lbl">Small joys</div><div class="lines"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 04 DAILY ===================== -->
+<div class="flabel">04 · <span>Daily</span></div>
+<div class="page" id="p-daily">
+  <div class="tabs"><a class="tab" href="#p-year">Year</a><a class="tab" href="#p-habits">Habits</a><a class="tab" href="#p-notes">Notes</a><a class="tab" href="#p-grat">Gratitude</a></div>
+  <div class="rail"><a class="rm on" href="#p-monthly">JAN</a><a class="rm" href="#p-monthly">FEB</a><a class="rm" href="#p-monthly">MAR</a><a class="rm" href="#p-monthly">APR</a><a class="rm" href="#p-monthly">MAY</a><a class="rm" href="#p-monthly">JUN</a><a class="rm" href="#p-monthly">JUL</a><a class="rm" href="#p-monthly">AUG</a><a class="rm" href="#p-monthly">SEP</a><a class="rm" href="#p-monthly">OCT</a><a class="rm" href="#p-monthly">NOV</a><a class="rm" href="#p-monthly">DEC</a></div>
+  <div class="content">
+    <div class="seal"></div>
+    <div class="dtop">
+      <a class="dnum" href="#p-monthly">06</a>
+      <div class="dstrip" id="dstrip"></div>
+    </div>
+    <div class="dsub"><a class="mo" href="#p-monthly" style="text-decoration:none">January</a></div>
+    <div class="dwk"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+
+    <div class="dcols">
+      <div class="dcol-l">
+        <div class="sec dph">Morning · Intention</div>
+        <div class="lbl" style="margin-top:16px">Today's affirmation</div>
+        <div class="box" style="height:200px"></div>
+        <div class="lbl" style="margin-top:18px">Today's weather</div>
+        <div class="wxr">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.3"><circle cx="12" cy="12" r="4.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.5 5.5l1.4 1.4M17 17l1.5 1.5M18.5 5.5L17 7M7 17l-1.5 1.5" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.3"><path d="M7 18a4 4 0 010-8 5 5 0 019.6-1.5A3.5 3.5 0 0117 18H7z" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.3"><path d="M7 15a4 4 0 010-8 5 5 0 019.6-1.5A3.5 3.5 0 0117 15H7z" stroke-linejoin="round"/><path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.3"><circle cx="8" cy="8" r="3"/><path d="M11 17a3.5 3.5 0 01.5-7 4.3 4.3 0 018.2 1.3A3 3 0 0119 17h-8z" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="sec dph dph-lg">Well-being</div>
+        <div class="row"><div class="k">Mood</div><div class="v"><div class="moods" id="moods"></div></div></div>
+        <div class="row"><div class="k">Energy</div><div class="v"><div class="ebar"><i style="height:9px"></i><i style="height:13px"></i><i style="height:17px"></i><i style="height:21px"></i><i style="height:24px"></i></div></div></div>
+        <div class="row"><div class="k">Sleep</div><div class="v"><span class="hrs">hrs slept</span></div></div>
+        <div class="row"><div class="k">Water</div><div class="v" id="cups"></div></div>
+        <div class="sec dph dph-lg">Nutrition check</div>
+        <div class="nf"><div class="k">Breakfast</div></div>
+        <div class="nf"><div class="k">Lunch</div></div>
+        <div class="nf"><div class="k">Dinner</div></div>
+        <div class="nf"><div class="k">Snack</div></div>
+        <div class="nf nf-total"><div class="k">Total</div></div>
+      </div>
+      <div class="dcol-r">
+        <div class="journal dj"></div>
+      </div>
+    </div>
+
+    <!-- night : quiet close -->
+    <div class="sec dph" style="color:var(--grat-c);border-color:var(--grat-line)">Night · Grateful for</div>
+    <div class="gr3"><div class="ln"></div><div class="ln"></div><div class="ln"></div></div>
+  </div>
+</div>
+
+<!-- ===================== 05 HABITS ===================== -->
+<div class="flabel">05 · <span>Habits</span></div>
+<div class="page" id="p-habits">
+  <div class="tabs"><a class="tab" href="#p-year">Year</a><a class="tab on" href="#p-habits">Habits</a><a class="tab" href="#p-notes">Notes</a><a class="tab" href="#p-grat">Gratitude</a></div>
+  <div class="rail"><a class="rm on" href="#p-monthly">JAN</a><a class="rm" href="#p-monthly">FEB</a><a class="rm" href="#p-monthly">MAR</a><a class="rm" href="#p-monthly">APR</a><a class="rm" href="#p-monthly">MAY</a><a class="rm" href="#p-monthly">JUN</a><a class="rm" href="#p-monthly">JUL</a><a class="rm" href="#p-monthly">AUG</a><a class="rm" href="#p-monthly">SEP</a><a class="rm" href="#p-monthly">OCT</a><a class="rm" href="#p-monthly">NOV</a><a class="rm" href="#p-monthly">DEC</a></div>
+  <div class="content">
+    <div class="seal"></div>
+    <div class="phead"><div><div class="eyebrow">Habits · January</div><h1 class="h1">Gentle <em>habits</em></h1></div>
+      <div class="pmeta">PROGRESS,<br>NOT PERFECTION</div></div>
+    <div class="hr white spaced"></div>
+    <div class="hb" id="hb"></div>
+    <div class="sec" style="margin-top:24px">Notes on this month</div>
+    <div class="hb-fill"></div>
+  </div>
+</div>
+
+<!-- ===================== 06 NOTES (month-contextual) ===================== -->
+<div class="flabel">06 · <span>Notes</span></div>
+<div class="page" id="p-notes">
+  <div class="tabs"><a class="tab" href="#p-year">Year</a><a class="tab" href="#p-habits">Habits</a><a class="tab on" href="#p-notes">Notes</a><a class="tab" href="#p-grat">Gratitude</a></div>
+  <div class="rail"><a class="rm on" href="#p-monthly">JAN</a><a class="rm" href="#p-monthly">FEB</a><a class="rm" href="#p-monthly">MAR</a><a class="rm" href="#p-monthly">APR</a><a class="rm" href="#p-monthly">MAY</a><a class="rm" href="#p-monthly">JUN</a><a class="rm" href="#p-monthly">JUL</a><a class="rm" href="#p-monthly">AUG</a><a class="rm" href="#p-monthly">SEP</a><a class="rm" href="#p-monthly">OCT</a><a class="rm" href="#p-monthly">NOV</a><a class="rm" href="#p-monthly">DEC</a></div>
+  <div class="content">
+    <div class="seal"></div>
+    <div class="phead"><div><div class="eyebrow"><a href="#p-monthly">‹ January</a> · Notes</div><h1 class="h1">January <em>notes</em></h1></div>
+      <div class="pmeta">THOUGHTS,<br>LISTS, IDEAS</div></div>
+    <div class="hr white spaced"></div>
+    <div class="nt"></div>
+  </div>
+</div>
+
+<!-- ===================== 07 GRATITUDE ===================== -->
+<div class="flabel">07 · <span>Gratitude</span></div>
+<div class="page" id="p-grat">
+  <div class="tabs"><a class="tab" href="#p-year">Year</a><a class="tab" href="#p-habits">Habits</a><a class="tab" href="#p-notes">Notes</a><a class="tab on" href="#p-grat">Gratitude</a></div>
+  <div class="rail"><a class="rm" href="#p-monthly">JAN</a><a class="rm" href="#p-monthly">FEB</a><a class="rm" href="#p-monthly">MAR</a><a class="rm" href="#p-monthly">APR</a><a class="rm" href="#p-monthly">MAY</a><a class="rm" href="#p-monthly">JUN</a><a class="rm" href="#p-monthly">JUL</a><a class="rm" href="#p-monthly">AUG</a><a class="rm" href="#p-monthly">SEP</a><a class="rm" href="#p-monthly">OCT</a><a class="rm" href="#p-monthly">NOV</a><a class="rm" href="#p-monthly">DEC</a></div>
+  <div class="content">
+    <div class="seal"></div>
+    <div class="phead"><div><div class="eyebrow">A year of thanks</div><h1 class="h1">Gratitude <em>log</em></h1></div>
+      <div class="pmeta">ONE NOTE,<br>EACH MONTH</div></div>
+    <div class="hr white spaced"></div>
+    <div class="grat" id="grat"></div>
+  </div>
+</div>
+
+<script src="js/medallion.js"></script>
+<script src="js/journal.js"></script>
+</body>
+</html>
