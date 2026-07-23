@@ -8,7 +8,8 @@
     "start": "python3 -m http.server 5173",
     "export": "node tools/planner.mjs",
     "guide": "node tools/guide.mjs",
+    "sticker-guide": "node tools/sticker-guide.mjs",
     "pdf": "node tools/pdf.mjs",
-    "build": "node tools/planner.mjs && node tools/guide.mjs && node tools/pdf.mjs"
+    "build": "node tools/planner.mjs && node tools/guide.mjs && node tools/sticker-guide.mjs && node tools/pdf.mjs"
   }
 }

@@ -135,6 +135,7 @@ async function printToPdf(port, fileUrl) {
 const jobs = themes.flatMap((t) => [
   { src: join(root, 'export', t, 'goyo-print.html'), out: join(root, 'export', t, `goyo-${t}.pdf`), label: `${t} planner` },
   { src: join(root, 'export', t, 'goyo-guide.html'), out: join(root, 'export', t, `goyo-guide-${t}.pdf`), label: `${t} guide` },
+  { src: join(root, 'export', t, 'goyo-sticker-guide.html'), out: join(root, 'export', t, `goyo-sticker-guide-${t}.pdf`), label: `${t} sticker guide` },
 ]);
 
 const userDataDir = mkdtempSync(join(tmpdir(), 'goyo-pdf-'));
