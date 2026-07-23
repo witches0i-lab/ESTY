@@ -11,6 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SEAL, gpage, steps, navlist, guideCss } from './guide-kit.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(root, p), 'utf8');
@@ -21,22 +22,6 @@ const base   = read('css/base.css');
 /* same layout/anchors/text everywhere — only the colourway tokens change.
    najeon ('') is the GOYO base; light/hanji are overrides. */
 const themes = { najeon: '', light: read('themes/light.css'), hanji: read('themes/hanji.css') };
-
-const SEAL = '<div class="seal"><svg viewBox="0 0 52 16">'
-  + '<ellipse cx="6" cy="9" rx="5" ry="3" fill="#74a89f" opacity=".9"/>'
-  + '<ellipse cx="17" cy="9" rx="3.3" ry="2.1" fill="#e6bcc7" opacity=".85"/>'
-  + '<ellipse cx="25" cy="9" rx="1.9" ry="1.3" fill="#cdbfb0" opacity=".6"/>'
-  + '<circle cx="44" cy="7" r="4" fill="#efe4cf" opacity=".85"/></svg></div>';
-
-const gpage = (eyebrow, title, body, foot = '') =>
-  `<div class="page"><div class="gpad">${SEAL}
-    <div class="g-head"><div class="eyebrow">${eyebrow}</div><h1 class="h1">${title}</h1></div>
-    ${body}
-    ${foot ? `<div class="g-foot">${foot}</div>` : ''}</div></div>`;
-
-const steps = (items) => `<ol class="steps">${items.map((t) => `<li>${t}</li>`).join('')}</ol>`;
-const navlist = (items) => `<ul class="navlist">${items.map(([k, v]) =>
-  `<li><span class="nk">${k}</span><span class="nv">${v}</span></li>`).join('')}</ul>`;
 
 /* ---- pages ---- */
 const welcome = `<div class="page"><div class="gpad g-welcome">
@@ -108,51 +93,8 @@ const thanks = gpage('With gratitude', 'Enjoy the stillness',
 
 const pages = [welcome, howItWorks, getSetUp, makeItYours, thanks];
 
-/* ---- guide-only styling (layered after base.css) ---- */
-const guideCss = `
-html,body{margin:0;padding:0;background:var(--bg);}
-body{display:block;}
-.page{margin:0 auto;break-after:page;page-break-after:always;background:
-  radial-gradient(120% 80% at 50% 28%,var(--surface) 0%,var(--bg) 60%);}
-.page:last-of-type{break-after:auto;}
-@page{size:1080px 1440px;margin:0;}
-@media print{.page{box-shadow:none;}}
-.gpad{padding:96px 110px;height:100%;display:flex;flex-direction:column;}
-.g-head{margin-bottom:18px;}
-.h1{font-size:54px;}
-.eyebrow{font-size:13px;}
-.g-body,.g-lead{font-family:var(--sans);color:var(--muted);font-size:20px;line-height:1.7;margin:18px 0;}
-.g-lead{font-size:22px;color:var(--ink);max-width:760px;}
-.g-body b,.g-lead b{color:var(--ink);font-weight:600;}
-.g-sub{font-family:var(--sans);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--accent);margin:34px 0 6px;border-bottom:1px solid var(--accent-line);padding-bottom:9px;}
-.steps{counter-reset:s;list-style:none;padding:0;margin:14px 0 6px;}
-.steps li{counter-increment:s;position:relative;padding:12px 0 12px 56px;font-size:19px;color:var(--ink);
-  line-height:1.55;border-bottom:1px solid var(--hair);}
-.steps li::before{content:counter(s);position:absolute;left:0;top:11px;width:34px;height:34px;
-  border-radius:50%;border:1px solid var(--accent-line);color:var(--accent);font-family:var(--serif);
-  font-size:18px;display:flex;align-items:center;justify-content:center;}
-.steps li b{color:var(--accent);font-weight:500;}
-.navlist{list-style:none;padding:0;margin:20px 0;}
-.navlist li{display:flex;gap:24px;padding:16px 2px;border-bottom:1px solid var(--hair);align-items:baseline;}
-.navlist .nk{font-family:var(--serif);font-style:italic;font-size:21px;color:var(--accent);width:210px;flex:none;}
-.navlist .nv{font-size:18px;color:var(--muted);line-height:1.55;}
-.navlist b,.g-note b{color:var(--ink);}
-.g-note{margin-top:28px;border:1px solid var(--accent2-line);background:var(--accent2-fill);
-  border-radius:12px;padding:22px 26px;font-size:18px;line-height:1.65;color:var(--muted);}
-.g-foot{margin-top:auto;padding-top:28px;border-top:1px solid var(--hair);
-  font-size:13px;letter-spacing:.08em;color:var(--faint);}
-/* welcome page */
-.g-welcome{align-items:center;text-align:center;justify-content:center;}
-.g-welcome .seal{justify-content:center;}
-.g-eyebrow{font-size:14px;letter-spacing:.42em;text-transform:uppercase;color:var(--faint);margin-top:8px;}
-.g-wordmark{font-family:var(--serif);font-weight:300;font-size:72px;letter-spacing:.36em;
-  color:var(--ink);padding-left:.36em;margin:30px 0 16px;}
-.g-tag{font-family:var(--serif);font-style:italic;font-size:27px;color:var(--accent);}
-.g-welcome .g-lead{margin-top:40px;text-align:center;}
-.g-rule{display:flex;justify-content:space-between;width:100%;margin-top:54px;border-top:1px solid var(--hair);
-  padding-top:24px;font-size:14px;letter-spacing:.08em;color:var(--faint);}
-`;
+/* guide styling (type scale + frame + components) is shared with the
+   sticker guide — see tools/guide-kit.mjs (imported as guideCss above). */
 
 const body = pages.join('\n');
 for (const [theme, themeCss] of Object.entries(themes)) {
