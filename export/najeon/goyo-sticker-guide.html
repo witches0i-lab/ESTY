@@ -366,11 +366,22 @@ body{display:block;}
   padding-top:24px;font-size:var(--gz-eyebrow);letter-spacing:.08em;color:var(--faint);}
 
 
+:root{
+  --gz-feature:19px;  /* lead + filename + emphasis (guide default 22) */
+  --gz-body:17px;     /* body copy               (guide default 20) */
+  --gz-body-sm:15px;  /* steps + notes           (guide default 18) */
+  --gz-meta:14px;     /* file meta               (guide default 16) */
+}
+.gpad{padding:88px 110px;}
+.steps li{padding:9px 0 9px 52px;}
+.steps li::before{width:30px;height:30px;top:9px;}
+.g-sub{margin:26px 0 4px;}
+.g-note{margin-top:22px;padding:20px 24px;}
 .g-note-k{font-family:var(--sans);font-size:var(--gz-label);letter-spacing:.18em;text-transform:uppercase;
   color:var(--accent2);margin-bottom:8px;}
 /* file list (what's inside) */
-.filelist{list-style:none;padding:0;margin:22px 0 6px;}
-.filelist li{display:flex;align-items:center;gap:22px;padding:20px 26px;margin-bottom:14px;
+.filelist{list-style:none;padding:0;margin:18px 0 4px;}
+.filelist li{display:flex;align-items:center;gap:22px;padding:15px 24px;margin-bottom:10px;
   border:1px solid var(--hair);border-radius:12px;background:var(--surface);}
 .filelist .ftext{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .filelist .fn{font-family:var(--serif);font-style:italic;font-size:var(--gz-feature);color:var(--ink);line-height:1.1;}
@@ -392,27 +403,16 @@ body{display:block;}
   <div class="g-rule"><span>162 STICKERS · SIX SETS</span><span>GOODNOTES · NOTABILITY</span></div>
 </div></div>
 <div class="page"><div class="gpad"><div class="seal"><svg viewBox="0 0 52 16"><ellipse cx="6" cy="9" rx="5" ry="3" fill="#74a89f" opacity=".9"/><ellipse cx="17" cy="9" rx="3.3" ry="2.1" fill="#e6bcc7" opacity=".85"/><ellipse cx="25" cy="9" rx="1.9" ry="1.3" fill="#cdbfb0" opacity=".6"/><circle cx="44" cy="7" r="4" fill="#efe4cf" opacity=".85"/></svg></div>
-    <div class="g-head"><div class="eyebrow">What’s inside</div><h1 class="h1">Your download</h1></div>
+    <div class="g-head"><div class="eyebrow">What’s inside · set-up</div><h1 class="h1">Your download</h1></div>
     <p class="g-body">Six sticker sets — phrases, tags, month seals, washi, widgets and
-   shapes — bundled into three tidy <b>.zip</b> files, plus a ready-made book. Everything
-   arrives with your order as individual, pre-cropped PNGs, ready to drop onto a page.</p><ul class="filelist"><li><span class="ftext"><span class="fn">goyo-word-label-stamp-tape.zip</span><span class="fm">Phrases, tags, month seals &amp; washi</span></span><span class="fc">59 PNG</span></li><li><span class="ftext"><span class="fn">goyo-widget.zip</span><span class="fm">Trackers, lists &amp; note cards</span></span><span class="fc">25 PNG</span></li><li><span class="ftext"><span class="fn">goyo-shape.zip</span><span class="fm">Circles, blooms, sparkles &amp; frames</span></span><span class="fc">78 PNG</span></li><li><span class="ftext"><span class="fn">goyo-stickerbook.goodnotes</span><span class="fm">A ready-made book — copy &amp; paste</span></span><span class="fc">BOOK</span></li><li><span class="ftext"><span class="fn">goyo-sticker-guide.pdf</span><span class="fm">This file</span></span><span class="fc">GUIDE</span></li></ul>
-    <div class="g-foot">Every sticker is a transparent PNG at 2× resolution — crisp in GoodNotes, Notability, Noteshelf, and any app that accepts images.</div></div></div>
+   shapes — bundled into three tidy <b>.zip</b> files, plus a ready-made book. All are
+   individual, pre-cropped PNGs at 2×, ready to drop onto a page.</p><ul class="filelist"><li><span class="ftext"><span class="fn">goyo-word-label-stamp-tape.zip</span><span class="fm">Phrases, tags, month seals &amp; washi</span></span><span class="fc">59 PNG</span></li><li><span class="ftext"><span class="fn">goyo-widget.zip</span><span class="fm">Trackers, lists &amp; note cards</span></span><span class="fc">25 PNG</span></li><li><span class="ftext"><span class="fn">goyo-shape.zip</span><span class="fm">Circles, blooms, sparkles &amp; frames</span></span><span class="fc">78 PNG</span></li><li><span class="ftext"><span class="fn">goyo-stickerbook.goodnotes</span><span class="fm">A ready-made book — copy &amp; paste</span></span><span class="fc">BOOK</span></li><li><span class="ftext"><span class="fn">goyo-sticker-guide.pdf</span><span class="fm">This file</span></span><span class="fc">GUIDE</span></li></ul><div class="g-sub">Download &amp; unzip</div><ol class="steps"><li>Your files are ready the moment payment clears — download them from Etsy.</li><li>Tap the <b>share</b> icon and choose <b>Save to Files</b>. Pick a folder you’ll remember.</li><li>Open the <b>Files</b> app and tap the <b>.zip</b> — it unzips itself into a folder.</li><li>Inside, each set has its own folder of individual, pre-cropped stickers.</li></ol>
+    <div class="g-foot">Keep the unzipped folder in Files rather than Photos — GoodNotes imports from Files far more smoothly.</div></div></div>
 <div class="page"><div class="gpad"><div class="seal"><svg viewBox="0 0 52 16"><ellipse cx="6" cy="9" rx="5" ry="3" fill="#74a89f" opacity=".9"/><ellipse cx="17" cy="9" rx="3.3" ry="2.1" fill="#e6bcc7" opacity=".85"/><ellipse cx="25" cy="9" rx="1.9" ry="1.3" fill="#cdbfb0" opacity=".6"/><circle cx="44" cy="7" r="4" fill="#efe4cf" opacity=".85"/></svg></div>
-    <div class="g-head"><div class="eyebrow">Getting started</div><h1 class="h1">Download &amp; unzip</h1></div>
-    <ol class="steps"><li>Your files are ready the moment payment clears. Download them from Etsy on your iPad — or on a computer, and send them across.</li><li>Tap the download; it opens in a new window.</li><li>Tap the <b>share</b> icon (the arrow pointing up) and choose <b>Save to Files</b>. Pick a folder you’ll remember.</li><li>Open the <b>Files</b> app and tap the <b>.zip</b> — it unzips itself into a folder.</li><li>Inside you’ll find one folder per set, each holding its individual pre-cropped stickers.</li></ol><div class="g-note"><div class="g-note-k">A note on storage</div>Keep the unzipped folder in <b>Files</b> rather than Photos — GoodNotes imports from Files far more smoothly.</div>
-    </div></div>
-<div class="page"><div class="gpad"><div class="seal"><svg viewBox="0 0 52 16"><ellipse cx="6" cy="9" rx="5" ry="3" fill="#74a89f" opacity=".9"/><ellipse cx="17" cy="9" rx="3.3" ry="2.1" fill="#e6bcc7" opacity=".85"/><ellipse cx="25" cy="9" rx="1.9" ry="1.3" fill="#cdbfb0" opacity=".6"/><circle cx="44" cy="7" r="4" fill="#efe4cf" opacity=".85"/></svg></div>
-    <div class="g-head"><div class="eyebrow">Method 1 · Elements</div><h1 class="h1">Best for everyday use</h1></div>
-    <p class="g-body">Save the stickers into GoodNotes once, then reach them from any
-   notebook, forever.</p><ol class="steps"><li>Open any notebook and tap the <b>Elements</b> tool in the toolbar.</li><li>Scroll the bottom list to the end and tap the <b>plus</b> sign.</li><li>Name the collection — <b>GOYO Shapes</b>, <b>GOYO Widgets</b>, and so on. One collection per folder keeps things tidy.</li><li>Tap <b>Import From</b> and find your unzipped folder.</li><li>Select the stickers you want, then tap <b>Create</b>.</li></ol><div class="g-note"><div class="g-note-k">Faster · split view</div>Open <b>Files</b> beside GoodNotes. In Files tap the <b>•••</b>, choose <b>Select</b>, then
-     <b>Select All</b> — drag the whole stack into the new collection window and let go.</div>
-    </div></div>
-<div class="page"><div class="gpad"><div class="seal"><svg viewBox="0 0 52 16"><ellipse cx="6" cy="9" rx="5" ry="3" fill="#74a89f" opacity=".9"/><ellipse cx="17" cy="9" rx="3.3" ry="2.1" fill="#e6bcc7" opacity=".85"/><ellipse cx="25" cy="9" rx="1.9" ry="1.3" fill="#cdbfb0" opacity=".6"/><circle cx="44" cy="7" r="4" fill="#efe4cf" opacity=".85"/></svg></div>
-    <div class="g-head"><div class="eyebrow">Two more ways</div><h1 class="h1">Image tool &amp; sticker book</h1></div>
-    <div class="g-sub">Method 2 · Image tool — quick, one at a time</div><ol class="steps"><li>Open your planner page and select the <b>Image</b> tool.</li><li>Tap where you want the sticker, then choose <b>Insert From</b>.</li><li>Pick your sticker; drag the corners to resize.</li></ol><div class="g-sub">Method 3 · Sticker book — copy &amp; paste</div><ol class="steps"><li>Open <b>goyo-stickerbook.goodnotes</b> — tap it in Files and choose <b>Open in GoodNotes</b>.</li><li>Open it beside your planner in <b>Split View</b>.</li><li>Lasso a sticker, tap the selection, choose <b>Copy</b> — then paste it onto your page.</li></ol>
-    </div></div>
-<div class="page"><div class="gpad"><div class="seal"><svg viewBox="0 0 52 16"><ellipse cx="6" cy="9" rx="5" ry="3" fill="#74a89f" opacity=".9"/><ellipse cx="17" cy="9" rx="3.3" ry="2.1" fill="#e6bcc7" opacity=".85"/><ellipse cx="25" cy="9" rx="1.9" ry="1.3" fill="#cdbfb0" opacity=".6"/><circle cx="44" cy="7" r="4" fill="#efe4cf" opacity=".85"/></svg></div>
-    <div class="g-head"><div class="eyebrow">Good to know</div><h1 class="h1">Care &amp; terms</h1></div>
-    <ul class="navlist"><li><span class="nk">Resizing</span><span class="nv">Every sticker is 2× resolution, so it stays crisp when you scale it up — even on an iPad Pro.</span></li><li><span class="nk">Mixing</span><span class="nv">All six sets share one palette. Any sticker sits happily beside any other.</span></li><li><span class="nk">Other apps</span><span class="nv">Notability, Noteshelf and GoodNotes all accept these PNGs. Only the <b>.goodnotes</b> book is GoodNotes-only.</span></li><li><span class="nk">Personal use</span><span class="nv">These stickers are for your own planning. Please don’t resell, share or redistribute the files.</span></li></ul><div class="g-note"><div class="g-note-k">Something not working?</div>Message me through Etsy and I’ll help you sort it out. Thank you for supporting a small studio.</div>
+    <div class="g-head"><div class="eyebrow">Using your stickers</div><h1 class="h1">Three ways in</h1></div>
+    <div class="g-sub">Method 1 · Elements — save once, reuse forever</div><ol class="steps"><li>Open any notebook and tap the <b>Elements</b> tool, then scroll to the end of the list and tap the <b>plus</b> sign.</li><li>Name the collection (<b>GOYO Shapes</b>, <b>GOYO Widgets</b>…), tap <b>Import From</b> and pick your folder.</li><li>Select the stickers you want, then tap <b>Create</b>.</li></ol><div class="g-sub">Method 2 · Image tool — one at a time</div><ol class="steps"><li>On your planner page, select the <b>Image</b> tool and choose <b>Insert From</b>.</li><li>Pick a sticker; drag the corners to resize.</li></ol><div class="g-sub">Method 3 · Sticker book — copy &amp; paste</div><ol class="steps"><li>Open <b>goyo-stickerbook.goodnotes</b> beside your planner in <b>Split View</b>.</li><li>Lasso a sticker, choose <b>Copy</b>, then paste it onto your page.</li></ol><div class="g-note"><div class="g-note-k">Good to know</div>Every sticker is 2× — crisp when you scale it up. All six sets share one palette, so anything
+     pairs. Notability, Noteshelf and GoodNotes accept the PNGs (the <b>.goodnotes</b> book is
+     GoodNotes-only). For your own planning, please don’t resell or share. Something off?
+     Message me through Etsy — and thank you for supporting a small studio.</div>
     <div class="g-foot">고요 · stillness — mother-of-pearl, reimagined quietly · made by a small studio, for you</div></div></div>
 </body></html>
