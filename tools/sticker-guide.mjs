@@ -22,9 +22,10 @@ const read = (p) => readFileSync(join(root, p), 'utf8');
 const fontFace = read('assets/fonts/fonts.css');
 const tokens = read('css/tokens.css');
 const base   = read('css/base.css');
-/* same layout/anchors/text everywhere — only the colourway tokens change.
-   najeon ('') is the GOYO base; light/hanji are overrides. */
-const themes = { najeon: '', light: read('themes/light.css'), hanji: read('themes/hanji.css') };
+/* The sticker guide ships as a single 'goyo' theme — the GOYO base
+   (najeon dark colourway, no override). Unlike the planner and user guide
+   it is not built per-colourway. */
+const THEME = 'goyo';
 
 /* sticker-guide-only helpers (the shared guide parts come from guide-kit) */
 const files = (items) => `<ul class="filelist">${items.map(([n, m, c]) =>
@@ -129,20 +130,18 @@ const stickerCss = `
 `;
 
 const body = pages.join('\n');
-for (const [theme, themeCss] of Object.entries(themes)) {
-  const css = [fontFace, tokens, themeCss, base, guideCss, stickerCss].filter(Boolean).join('\n');
-  // No Google Fonts <link> here on purpose: fontFace already embeds Bodoni Moda +
-  // Inter as base64, and an external stylesheet link can make Chrome's print
-  // pipeline hang waiting on network in offline/sandboxed render environments.
-  const out = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+const css = [fontFace, tokens, base, guideCss, stickerCss].filter(Boolean).join('\n');
+// No Google Fonts <link> here on purpose: fontFace already embeds Bodoni Moda +
+// Inter as base64, and an external stylesheet link can make Chrome's print
+// pipeline hang waiting on network in offline/sandboxed render environments.
+const out = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GOYO — Sticker guide (${theme})</title>
+<title>GOYO — Sticker guide</title>
 <style>${css}</style></head><body>
 ${body}
 </body></html>
 `;
-  mkdirSync(join(root, 'export', theme), { recursive: true });
-  writeFileSync(join(root, 'export', theme, 'goyo-sticker-guide.html'), out);
-}
-console.log(`Built sticker guide (${pages.length} pages × ${Object.keys(themes).length} themes) → export/<theme>/goyo-sticker-guide.html`);
-console.log(`Next: node tools/pdf.mjs   → export/<theme>/goyo-sticker-guide-<theme>.pdf`);
+mkdirSync(join(root, 'export', THEME), { recursive: true });
+writeFileSync(join(root, 'export', THEME, 'goyo-sticker-guide.html'), out);
+console.log(`Built sticker guide (${pages.length} pages) → export/${THEME}/goyo-sticker-guide.html`);
+console.log(`Next: node tools/pdf.mjs   → export/${THEME}/goyo-sticker-guide.pdf`);

@@ -11,12 +11,12 @@ najeon pink (secondary) on dark ink, with a procedural najeon medallion on the c
 The runtime journal is a **plain static site** — no framework, no dependencies. A tiny
 dependency-free **build** (Node built-ins only) generates the sellable product.
 
-**The Etsy product is three files per colourway:** the **planner** (`goyo-<theme>.pdf` — a full
-hyperlinked year), the **user guide** (`goyo-guide-<theme>.pdf`), and the **sticker guide**
-(`goyo-sticker-guide-<theme>.pdf` — quick-start for the companion sticker pack) — e.g.
-`goyo-najeon.pdf` + `goyo-guide-najeon.pdf` + `goyo-sticker-guide-najeon.pdf`. Named per-theme so
-the files never get mixed up. All are generated for each theme (najeon / light / hanji) into
-`export/<theme>/`. **najeon is the GOYO base**; light & hanji change only the colourway tokens —
+**The Etsy product is two per-colourway files plus one shared guide:** the **planner**
+(`goyo-<theme>.pdf` — a full hyperlinked year) and the **user guide** (`goyo-guide-<theme>.pdf`)
+are built for each theme (najeon / light / hanji) into `export/<theme>/` — e.g. `goyo-najeon.pdf`
++ `goyo-guide-najeon.pdf`. The **sticker guide** (`goyo-sticker-guide.pdf` — quick-start for the
+companion sticker pack) is a **single 'goyo' theme** (the najeon base, dark), built once into
+`export/goyo/`. **najeon is the GOYO base**; light & hanji change only the colourway tokens —
 layout, anchors and text positions are identical across all three.
 
 ## Run / preview
@@ -26,7 +26,8 @@ python3 -m http.server 5173      # or: npm run dev  → http://localhost:5173
 # planner.html = generated full-year planner (394 pages), live preview (najeon base)
 
 npm run build   # planner.mjs + guide.mjs + sticker-guide.mjs + pdf.mjs
-                # → export/<theme>/goyo-<theme>.pdf + goyo-guide-<theme>.pdf + goyo-sticker-guide-<theme>.pdf
+                # → export/<theme>/goyo-<theme>.pdf + goyo-guide-<theme>.pdf  (per theme)
+                #   + export/goyo/goyo-sticker-guide.pdf                      (single theme)
 ```
 Every `.page` is `1080 × 1440` (portrait, tablet-friendly for GoodNotes).
 
@@ -44,8 +45,8 @@ themes/cover/      per-theme cover artwork packs (NN.defs.svg + NN.med.js); naje
 tools/planner.mjs PRODUCT build: full year → cover, year, 12 months, 365 days, habits, weekly,
                   gratitude, notes; all internal links wired. → export/<theme>/goyo-print.html + planner.html
 tools/guide.mjs   user-guide build, one per theme (same layout, colourway only) → export/<theme>/goyo-guide.html
-tools/sticker-guide.mjs  sticker-pack quick-start, one per theme (same GOYO guide design language)
-                  → export/<theme>/goyo-sticker-guide.html
+tools/sticker-guide.mjs  sticker-pack quick-start, single 'goyo' theme (same GOYO guide design language)
+                  → export/goyo/goyo-sticker-guide.html
 tools/pdf.mjs     render every goyo-print.html + the guide + the sticker guide → PDF (internal links preserved)
 docs/link-test.md GoodNotes / Notability hyperlink test checklist
 export/           generated output (regenerate via `npm run build`; large goyo-<theme>.pdf is gitignored)
