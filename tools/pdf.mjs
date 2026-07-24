@@ -132,11 +132,14 @@ async function printToPdf(port, fileUrl) {
 /* render targets: the planner (per theme) + the user guide.
    Output filenames carry the theme (goyo-najeon.pdf, goyo-guide-najeon.pdf, …)
    so the two sellable files never get mixed up between colourways. */
-const jobs = themes.flatMap((t) => [
-  { src: join(root, 'export', t, 'goyo-print.html'), out: join(root, 'export', t, `goyo-${t}.pdf`), label: `${t} planner` },
-  { src: join(root, 'export', t, 'goyo-guide.html'), out: join(root, 'export', t, `goyo-guide-${t}.pdf`), label: `${t} guide` },
-  { src: join(root, 'export', t, 'goyo-sticker-guide.html'), out: join(root, 'export', t, `goyo-sticker-guide-${t}.pdf`), label: `${t} sticker guide` },
-]);
+const jobs = [
+  ...themes.flatMap((t) => [
+    { src: join(root, 'export', t, 'goyo-print.html'), out: join(root, 'export', t, `goyo-${t}.pdf`), label: `${t} planner` },
+    { src: join(root, 'export', t, 'goyo-guide.html'), out: join(root, 'export', t, `goyo-guide-${t}.pdf`), label: `${t} guide` },
+  ]),
+  // The sticker guide is a single 'goyo' theme (not per-colourway).
+  { src: join(root, 'export', 'goyo', 'goyo-sticker-guide.html'), out: join(root, 'export', 'goyo', 'goyo-sticker-guide.pdf'), label: 'goyo sticker guide' },
+];
 
 const userDataDir = mkdtempSync(join(tmpdir(), 'goyo-pdf-'));
 const port = 9333 + Math.floor(Math.random() * 500);
