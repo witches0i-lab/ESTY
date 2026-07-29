@@ -1,105 +1,38 @@
-# CLAUDE.md — GOYO Wellness Journal
+# CLAUDE.md — witches0i-lab/ESTY
 
-Project context for Claude Code. Read this before making changes.
+## ── COMMON (applies to every journal theme in this repo) ──
 
-## What this is
-GOYO (고요, "stillness") is a **dark-mode, undated wellness journal** sold on Etsy as a
-**GoodNotes / Notability–compatible hyperlinked PDF**. Aesthetic: Korean *najeon* (나전,
-mother-of-pearl) reinterpreted as modern, minimal, editorial. Identity = celadon (primary) +
-najeon pink (secondary) on dark ink, with a procedural najeon medallion on the cover.
+### Repo scope
+This is the CODE track only. Design and marketing live elsewhere, NOT here:
+- Design: Figma `Ds1jpwqKkL1nkWpTXsJczw` (Etsy-Project)
+- Marketing / copy / SEO / pricing / pin status: Notion master hub
+  → Read Notion page "🧭 GOYO 현재 상태 (Single Source of Truth)" for cross-track state.
+- Chat-side Claude (claude.ai) handles Figma + Notion but CANNOT access this repo.
+  Claude Code CANNOT access Figma or Notion. The Notion status page is the bridge.
+- Chat-side memory and Claude Code memory are NOT shared. Don't assume shared context — read this file + Notion.
 
-The runtime journal is a **plain static site** — no framework, no dependencies. A tiny
-dependency-free **build** (Node built-ins only) generates the sellable product.
+### Source of truth (READ FIRST)
+- `index.html` is the source of truth for journal pages. NOT planner.html.
+- Each journal theme has 7 base pages: Cover, Year, Monthly, Daily, Habits, Notes, Gratitude. Each 1080×1440px.
 
-**The Etsy product is two per-colourway files plus one shared guide:** the **planner**
-(`goyo-<theme>.pdf` — a full hyperlinked year) and the **user guide** (`goyo-guide-<theme>.pdf`)
-are built for each theme (najeon / light / hanji) into `export/<theme>/` — e.g. `goyo-najeon.pdf`
-+ `goyo-guide-najeon.pdf`. The **sticker guide** (`goyo-sticker-guide.pdf` — quick-start for the
-companion sticker pack) is a **single 'goyo' theme** (the najeon base, dark), built once into
-`export/goyo/`. **najeon is the GOYO base**; light & hanji change only the colourway tokens —
-layout, anchors and text positions are identical across all three.
+### Conventions (all themes)
+- Keep product lines/themes namespaced; one theme's change must never leak into another.
+- When color assignments change, edit CSS rules AND HTML markup together.
+- Measure before changing; never guess coordinates/values from memory.
+- Don't treat planner.html as canonical.
 
-## Run / preview
-```bash
-python3 -m http.server 5173      # or: npm run dev  → http://localhost:5173
-# index.html  = 7-page design sample (the archetypes)
-# planner.html = generated full-year planner (394 pages), live preview (najeon base)
+## ── GOYO (Journal) — theme-specific ──
+- Korean craft-inspired digital wellness journal for iPad (GoodNotes/Notability), undated hyperlinked PDFs.
+- Colorways: Najeon (dark), Light (pink), Hanji (cream). Keep each colorway isolated.
+- Status: journal build COMPLETE (2026-07). Maintenance/edits only.
 
-npm run build   # planner.mjs + guide.mjs + sticker-guide.mjs + pdf.mjs
-                # → export/<theme>/goyo-<theme>.pdf + goyo-guide-<theme>.pdf  (per theme)
-                #   + export/goyo/goyo-sticker-guide.pdf                      (single theme)
-```
-Every `.page` is `1080 × 1440` (portrait, tablet-friendly for GoodNotes).
+## ── GOYO Sticker Guide — product-specific ──
+- Separate product line: a quick-start guide for the companion GOYO sticker pack (162 stickers), NOT a journal theme.
+- Single `goyo` theme only (the Najeon base, dark) — no light/hanji colorways. 3 pages, same GOYO guide design language (seal, type, frame).
+- Build: `tools/sticker-guide.mjs` (`npm run sticker-guide`, also part of `npm run build`) → `export/goyo/goyo-sticker-guide.html` → `.pdf` via `tools/pdf.mjs`.
+- The COMMON "7 journal base pages" rule does NOT apply here; keep this product namespaced from the journal.
+- Status: build COMPLETE (2026-07). Maintenance/edits only.
 
-## Structure
-```
-index.html        7 archetype pages (Cover, Year, Monthly, Daily, Habits, Notes, Gratitude) — design sample
-css/tokens.css    DESIGN SYSTEM — single source of truth (palette, type, spacing, frame)
-css/base.css      layout + components (chrome, labels, rows, page-specific). Don't churn.
-js/medallion.js   procedural najeon cover art (seeded PRNG → SVG into #art)
-js/journal.js     seal + page generators for the sample (date strip, calendar, cols, habit grid)
-assets/           hi-fidelity cover medallion (svg + png) for print/Figma
-themes/           colourway overrides (light.css, hanji.css) — opt-in
-themes/cover/      per-theme cover artwork packs (NN.defs.svg + NN.med.js); najeon = base,
-                  light = pink glass-sphere. Planner builds the cover per theme.
-tools/planner.mjs PRODUCT build: full year → cover, year, 12 months, 365 days, habits, weekly,
-                  gratitude, notes; all internal links wired. → export/<theme>/goyo-print.html + planner.html
-tools/guide.mjs   user-guide build, one per theme (same layout, colourway only) → export/<theme>/goyo-guide.html
-tools/sticker-guide.mjs  sticker-pack quick-start, single 'goyo' theme (same GOYO guide design language)
-                  → export/goyo/goyo-sticker-guide.html
-tools/pdf.mjs     render every goyo-print.html + the guide + the sticker guide → PDF (internal links preserved)
-docs/link-test.md GoodNotes / Notability hyperlink test checklist
-export/           generated output (regenerate via `npm run build`; large goyo-<theme>.pdf is gitignored)
-```
-
-## Design system rules (important)
-- **Variations = edit `css/tokens.css` only.** Colour, font, spacing, and frame are all tokens.
-  Never fork the layout to reskin it. To try a colourway, add/override `:root` in a theme file.
-- **Apply a theme:** add `<link rel="stylesheet" href="themes/light.css">` *after* `css/tokens.css`
-  in `index.html` (later link wins). Default ships dark. There is no in-page theme switcher —
-  each colourway is a separate build/preview (see `export/<theme>/`).
-- Keep the type hierarchy: one serif display per page (`--serif`, Bodoni Moda), everything else
-  `--sans` (Inter) at `--t-label` (11px, uppercase, letter-spaced) with hairline separators.
-- Accents: `--accent` (celadon) = active/section; `--accent2` (pink) = dividers, gratitude, seal.
-- Chrome is shared: text tabs w/ celadon underline, 40px **rotated** month rail, najeon seal.
-
-## Cover medallion
-Generated procedurally in `js/medallion.js` (water + moon + lower-left najeon pine, seed = 11).
-Don't hand-edit the generated nodes. The dark colourway is fixed for the cover; the standalone
-`assets/goyo-cover-medallion.svg/.png` is the print/Figma copy.
-
-## Roadmap (good tasks)
-1. ~~`themes/` colourways + a tiny theme switcher for review.~~ ✅ Najeon (default dark) /
-   Light / Hanji. (The in-page switcher UI was later removed as unnecessary; preview each
-   colourway via its own build in `export/<theme>/` or `planner.html`.)
-2. ~~Per-theme **export to print-ready HTML** (one file per page, no workspace chrome/labels).~~
-   ✅ `npm run export` (`tools/export.mjs`) → `export/<theme>/NN-name.html` (7 pages × 3 themes),
-   each self-contained (inlined CSS/JS, no chrome) at 1080×1440. `export/index.html` is a contact
-   sheet. Dependency-free (Node built-ins only).
-3. ~~**Hyperlinked-PDF pipeline** — wire nav as anchors (tabs→pages, rail→months, index→sections),
-   render to PDF preserving internal links, and a GoodNotes link-test checklist.~~ ✅ Each `.page`
-   has `id="p-<slug>"`; tabs/rail/index are `<a href="#p-…">`. `npm run export` emits a combined
-   `goyo-print.html` per theme; `npm run pdf` drives a pre-installed Chromium to render
-   `goyo-<theme>.pdf` with internal links preserved (~113 link annots / 7 pages). Per-page export files
-   rewrite anchors to sibling `.html`. Test with `docs/link-test.md`. Rail → single Monthly page
-   until roadmap 4 adds 12 monthlies.
-4. ~~New pages: weekly reflection, year-at-a-glance, gratitude log.~~ ✅ Plus the big scale-up:
-   `tools/planner.mjs` generates the **full undated year** — cover, year-at-a-glance, 12 monthly
-   pages, **a page for every day** (366 incl. Feb 29 so it works in leap years), 12 monthly habit
-   grids, 12 per-month notes pages, and a gratitude log as the final page. **No year, no weekday is
-   printed** (it is undated — reuse every year; `MLEN` fixes month lengths). Top tabs are
-   **Year · Habits · Notes · Gratitude**; Habits/Notes are month-contextual (this month's pages),
-   Gratitude is last. Every nav is wired: rail JAN–DEC → the 12 months everywhere, year → months
-   (+ a per-month notes chip), calendar day → that day, day → back to its month
-   (~19k link annotations / PDF). `tools/guide.mjs` builds the companion user guide. The 7-page
-   `index.html` remains the hand-authored design sample.
-
-## Conventions
-- Stay dependency-free and framework-free. No bundler.
-- Keep `index.html` self-contained and each page `1080×1440`.
-- Preserve token names (other files + the Figma build depend on them).
-
-## Caveats
-- The rotated month-rail renders fine in browsers, but some PDF exporters mishandle vertical
-  text — if it shifts on export, outline (vectorise) or rasterise just the month labels.
-- Etsy product = the **hyperlinks**; test every link in GoodNotes before publishing.
+## ── Adding a new theme later ──
+- Duplicate the GOYO theme-specific section, rename, and fill in that theme's specifics.
+- Keep the COMMON section untouched.
