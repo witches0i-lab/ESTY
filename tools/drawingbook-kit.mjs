@@ -200,3 +200,134 @@ export function frames(w, cols, rows, { gap = 28, thirds = false } = {}) {
   }
   return { svg: s, fw, fh };
 }
+
+/* ============================================================
+   SOLIDS — parallel projection
+   The 形 drills need forms a reader can actually copy, so these build real
+   geometry (a box that genuinely turns, a cylinder with a body) rather than
+   suggestive line sketches. Parallel projection, not perspective: these pages
+   teach the *form*, and the perspective drills (f01–f09) teach convergence.
+   ============================================================ */
+
+const K_TILT = 0.45;   // vertical foreshortening of the ground plane
+
+/** A box rotated `deg` about its vertical axis. Returns the 8 projected pts. */
+export function boxPoints(c, deg, { w = 0.46, d = 0.30, h = 0.42, cy = 0.62 } = {}) {
+  const th = (deg * Math.PI) / 180;
+  const W = c * w, D = c * d, Hh = c * h, ox = c / 2, oy = c * cy;
+  const plan = [[-W / 2, -D / 2], [W / 2, -D / 2], [W / 2, D / 2], [-W / 2, D / 2]];
+  const base = plan.map(([x, z]) => {
+    const X = x * Math.cos(th) - z * Math.sin(th);
+    const Z = x * Math.sin(th) + z * Math.cos(th);
+    return [ox + X, oy + Z * K_TILT];
+  });
+  return { base, top: base.map(([x, y]) => [x, y - Hh]) };
+}
+
+/** Draw that box as a SOLID: hidden edges are omitted, so a shaded face reads
+    as a surface rather than as hatching seen through a glass box.
+    `faces` fills [top, left side, right side] with hatch densities. */
+export function isoBox(c, deg, { filled = true, faces, id = 'b', h, cage = false } = {}) {
+  const { base, top } = boxPoints(c, deg, h ? { h } : {});
+  const st = filled ? 'var(--ink)' : 'var(--guide-l)', sw = filled ? 1.6 : 1.2;
+  const P = (pts) => 'M' + pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L') + 'Z';
+
+  /* The nearest base corner is the lowest on screen; the two side faces that
+     meet there are the ones facing the viewer. Everything behind it is hidden. */
+  let front = 0;
+  base.forEach(([, y], i) => { if (y > base[front][1]) front = i; });
+  const prev = (front + 3) % 4, next = (front + 1) % 4;
+  const rear = (front + 2) % 4;
+
+  const sideFace = (i, j) => [top[i], top[j], base[j], base[i]];
+  const sides = [sideFace(prev, front), sideFace(front, next)]
+    .sort((q1, q2) => (q1[0][0] + q1[1][0]) - (q2[0][0] + q2[1][0]));   // left, then right
+
+  let s = '';
+  if (faces) {
+    [top, ...sides].slice(0, faces.length).forEach((q, i) => {
+      if (faces[i] == null) return;
+      const cid = `fb${id}${i}`;
+      s += `<clipPath id="${cid}"><path d="${P(q)}"/></clipPath>`
+        + `<g clip-path="url(#${cid})">`
+        + hatch(c, c, { angle: 45, spacing: HATCH[faces[i]][0],
+                        width: HATCH[faces[i]][1], id: cid + 'h' })
+        + `</g>`;
+    });
+  }
+  s += `<path d="${P(top)}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  if (cage) {
+    /* a construction cage, not an object: show all twelve edges, the three
+       hidden ones dashed. Drawn solid it is indistinguishable from the form
+       sitting inside it, which is the whole point of the 物 drill. */
+    s += `<path d="${P(base)}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+    for (let i = 0; i < 4; i++)
+      s += line(base[i][0], base[i][1], top[i][0], top[i][1],
+        i === rear ? { c: st, w: sw, dash: '5 5' } : { c: st, w: sw });
+    return s;
+  }
+  // an opaque solid: only the edges it actually shows
+  for (const i of [prev, front, next])
+    s += line(base[i][0], base[i][1], top[i][0], top[i][1], { c: st, w: sw });
+  for (const [i, j] of [[prev, front], [front, next]])
+    s += line(base[i][0], base[i][1], base[j][0], base[j][1], { c: st, w: sw });
+  void rear;
+  return s;
+}
+
+/** A cylinder lying along the axis A→B. `e` is end-cap foreshortening. */
+export function cylinderAxis(x1, y1, x2, y2, r, { e = 0.34, filled = true, id = 'c', shade } = {}) {
+  const ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+  const rad = (ang * Math.PI) / 180;
+  const nx = -Math.sin(rad) * r, ny = Math.cos(rad) * r;   // perpendicular offset
+  const st = filled ? 'var(--ink)' : 'var(--guide-l)', sw = filled ? 1.6 : 1.2;
+  const cap = (x, y) => `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" `
+    + `rx="${(r * e).toFixed(1)}" ry="${r.toFixed(1)}" fill="none" stroke="${st}" `
+    + `stroke-width="${sw}" transform="rotate(${ang.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
+  let s = '';
+  if (shade) {
+    const body = `M${(x1 + nx).toFixed(1)} ${(y1 + ny).toFixed(1)}`
+      + `L${(x2 + nx).toFixed(1)} ${(y2 + ny).toFixed(1)}`
+      + `L${(x2 - nx).toFixed(1)} ${(y2 - ny).toFixed(1)}`
+      + `L${(x1 - nx).toFixed(1)} ${(y1 - ny).toFixed(1)}Z`;
+    s += `<clipPath id="cy${id}"><path d="${body}"/></clipPath><g clip-path="url(#cy${id})">`
+      + hatch(Math.max(x1, x2) + r * 2, Math.max(y1, y2) + r * 2,
+              { angle: ang + 90, spacing: 6, width: 1.5, id: 'cyh' + id })
+      + `</g>`;
+  }
+  s += line(x1 + nx, y1 + ny, x2 + nx, y2 + ny, { c: st, w: sw })
+    +  line(x1 - nx, y1 - ny, x2 - nx, y2 - ny, { c: st, w: sw })
+    +  cap(x2, y2) + cap(x1, y1);
+  return s;
+}
+
+/** A cone: base ellipse at A, tip at B, with the axis showing. */
+export function coneAxis(x1, y1, x2, y2, r, { e = 0.34, filled = true } = {}) {
+  const ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+  const rad = (ang * Math.PI) / 180;
+  const nx = -Math.sin(rad) * r, ny = Math.cos(rad) * r;
+  const st = filled ? 'var(--ink)' : 'var(--guide-l)', sw = filled ? 1.6 : 1.2;
+  return line(x1, y1, x2, y2, { c: 'var(--guide)', w: 1, dash: '4 5' })
+    + `<ellipse cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" rx="${(r * e).toFixed(1)}" `
+    + `ry="${r.toFixed(1)}" fill="none" stroke="${st}" stroke-width="${sw}" `
+    + `transform="rotate(${ang.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)})"/>`
+    + line(x1 + nx, y1 + ny, x2, y2, { c: st, w: sw })
+    + line(x1 - nx, y1 - ny, x2, y2, { c: st, w: sw });
+}
+
+/** A sphere wrapped in contour lines, tilted so the wrap reads as 3D. */
+export function sphereContours(cx, cy, r, tilt = 0, { filled = true, lats = 4, lon = true } = {}) {
+  const st = filled ? 'var(--ink)' : 'var(--guide-l)', sw = filled ? 1.6 : 1.2;
+  let s = `<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r}" fill="none" stroke="${st}" stroke-width="${sw}"/>`;
+  if (!filled) return s;
+  const g = [];
+  for (let i = 1; i <= lats; i++) {
+    const t = -1 + (2 * i) / (lats + 1);
+    g.push(`<ellipse cx="${cx}" cy="${(cy + r * t).toFixed(1)}" `
+      + `rx="${(r * Math.sqrt(1 - t * t)).toFixed(1)}" ry="${(r * 0.2).toFixed(1)}" `
+      + `fill="none" stroke="var(--guide)" stroke-width="1"/>`);
+  }
+  if (lon) g.push(`<ellipse cx="${cx}" cy="${cy}" rx="${(r * 0.36).toFixed(1)}" ry="${r}" `
+    + `fill="none" stroke="var(--guide)" stroke-width="1"/>`);
+  return s + `<g transform="rotate(${tilt} ${cx} ${cy})">${g.join('')}</g>`;
+}

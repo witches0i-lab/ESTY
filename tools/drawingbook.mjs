@@ -99,34 +99,54 @@ const T = (han, latin) =>
    A · Rows  — EXAMPLE cell → arrow → YOURS cell, repeated
    B · Band  — EXAMPLE strip on top, YOURS field beneath
    ============================================================ */
-const A_EX = 122, A_YO = 480;                 // cell x, from the m01 comp
-function rowsGeom(n) {
-  const gap = 54;
-  const cell = Math.min(180, Math.floor((H - 30 - gap * (n - 1)) / n));
-  return { cell, pitch: cell + gap, top: 30 };
+/* Canonical layout-A grid comes from the m01 comp (Figma 878:17110), which the
+   spec cites as the sample: 180px cells at x 122 / 480, pitch 234, top 30.
+   A drill may ask for a larger `cell` when it has only two or three rows —
+   at 180 those pages leave the bottom 40% of the sheet empty, which reads as
+   a mistake rather than as breathing room. Anything off the canonical size is
+   centred as a pair instead, so the page still has one axis. */
+const A_COMP = { cell: 180, ex: 122, yo: 480, top: 30 };
+const A_GAP = 54, A_LABELW = 100, A_ARROW = 72;
+const overflows = [];   // drills whose rows do not fit the body box
+
+function rowsGeom(n, cell) {
+  /* Shrink to fit when a drill has many rows — f10 turns a box in seven 15°
+     steps and cannot hold seven 180px cells. An explicit `cell` larger than
+     the canonical one opts into the centred wide pair instead. */
+  const fit = Math.floor((H - A_GAP * (n - 1)) / n);
+  const c = cell || Math.min(A_COMP.cell, fit);
+  const pitch = c + A_GAP;
+  const block = n * c + (n - 1) * A_GAP;
+  if (c <= A_COMP.cell) {
+    return { cell: c, pitch, block, ex: A_COMP.ex, yo: A_COMP.yo,
+             top: (n >= 4 && c === A_COMP.cell) ? A_COMP.top : Math.max(0, (H - block) / 2) };
+  }
+  const pairW = 2 * c + A_ARROW;
+  const ex = A_LABELW + Math.max(0, (W - A_LABELW - pairW) / 2);
+  return { cell: c, pitch, block, top: Math.max(0, (H - block) / 2),
+           ex, yo: ex + c + A_ARROW };
 }
 
 function layoutA(p) {
-  const n = p.rows, g = rowsGeom(n);
+  const n = p.rows, g = rowsGeom(n, p.cell);
   let svg = '', html = '';
-  html += `<div class="lab" style="left:${A_EX}px;top:-18px">EXAMPLE</div>`
-        + `<div class="lab" style="left:${A_YO}px;top:-18px">YOURS</div>`;
+  html += `<div class="lab" style="left:${g.ex}px;top:${g.top - 18}px">EXAMPLE</div>`
+        + `<div class="lab" style="left:${g.yo}px;top:${g.top - 18}px">YOURS</div>`;
   for (let i = 0; i < n; i++) {
     const y = g.top + i * g.pitch, c = g.cell;
     if (p.rowLabels?.[i])
       html += `<div class="rowlab" style="top:${y + c / 2 - 14}px">${p.rowLabels[i]}</div>`;
-    // EXAMPLE — art supplied by the drill
-    svg += `<g transform="translate(${A_EX} ${y})">${p.example ? p.example(i, c, g) : ''}</g>`;
-    svg += K.rect(A_EX, y, c, c, { c: 'var(--hair)' });
-    // arrow
-    const my = y + c / 2;
-    svg += K.line(A_EX + c + 45, my, A_EX + c + 77, my, { c: 'var(--guide)' })
-        +  `<path d="M${A_EX + c + 70} ${my - 4}L${A_EX + c + 77} ${my}L${A_EX + c + 70} ${my + 4}" `
+    svg += `<g transform="translate(${g.ex} ${y})">${p.example ? p.example(i, c, g) : ''}</g>`;
+    svg += K.rect(g.ex, y, c, c, { c: 'var(--hair)' });
+    const my = y + c / 2, ax = g.ex + c + (A_ARROW - 32) / 2;
+    svg += K.line(ax, my, ax + 32, my, { c: 'var(--guide)' })
+        +  `<path d="M${ax + 25} ${my - 4}L${ax + 32} ${my}L${ax + 25} ${my + 4}" `
         +  `stroke="var(--guide)" stroke-width="1" fill="none"/>`;
-    // YOURS — empty box plus whatever faint guide the drill asks for
-    svg += `<g transform="translate(${A_YO} ${y})">${p.yours ? p.yours(i, c, g) : ''}</g>`;
-    svg += K.rect(A_YO, y, c, c, { c: 'var(--hair)' });
+    svg += `<g transform="translate(${g.yo} ${y})">${p.yours ? p.yours(i, c, g) : ''}</g>`;
+    svg += K.rect(g.yo, y, c, c, { c: 'var(--hair)' });
   }
+  if (g.top + g.block > H + 1) overflows.push(`${p.id} (${n} rows, cell ${g.cell}) by ${Math.round(g.top + g.block - H)}px`);
+  if (g.yo + g.cell > W + 1) overflows.push(`${p.id} runs ${Math.round(g.yo + g.cell - W)}px past the right margin`);
   return html + K.svg(W, H, svg);
 }
 
@@ -218,22 +238,49 @@ const INK = [
     layout:'B', band:(w,h)=>gradBar(w,120,'m06b'),
     field:(w,h)=>K.rect(0,(h-120)/2,w,120,{c:'var(--guide-l)'}) }],
   ['m07','球','Shade a sphere','Light from the upper left.','15–20', {
-    layout:'A', rows:2, example:(i,c)=>sphere(c,true,'m07'+i), yours:(i,c)=>sphere(c,false) }],
+    layout:'A', rows:4, rowLabels:['一','二','三','四'],
+    example:(i,c)=>sphere(c,i,'m07'+i), yours:(i,c)=>sphere(c,null,'m07y'+i) }],
   ['m08','六面體','Shade a cube','Three faces, three values.','15', {
-    layout:'A', rows:2, example:(i,c)=>cube(c,true,'m08'+i), yours:(i,c)=>cube(c,false) }],
+    layout:'A', rows:4, rowLabels:['一','二','三','四'],
+    example:(i,c)=>cube(c,i,'m08'+i,1), yours:(i,c)=>cube(c,null,'m08y'+i) }],
   ['m09','圓柱','Shade a cylinder','Follow the curve with your strokes.','15–20', {
-    layout:'A', rows:2, example:(i,c)=>cylinder(c,true,'m09'+i), yours:(i,c)=>cylinder(c,false) }],
+    layout:'A', rows:4, rowLabels:['一','二','三','四'],
+    example:(i,c)=>cylinder(c,i,'m09'+i), yours:(i,c)=>cylinder(c,null,'m09y'+i) }],
   ['m10','影','Cast shadows','Find where the light stops.','20', {
     layout:'B',
-    band:(w,h)=>K.line(0,h-30,w,h-30,{c:'var(--guide)'})+K.dot(150,40,4,'var(--ink)')
-      +K.ellipse(430,h-70,44,44)+K.ellipse(520,h-28,80,14,{c:'var(--guide-l)',w:1}),
-    field:(w,h)=>K.line(0,h-120,w,h-120,{c:'var(--guide)'})+K.dot(150,60,4,'var(--ink)')
-      +K.ellipse(300,h-190,56,56,{c:'var(--guide-l)',w:1.2})
-      +K.rect(470,h-250,130,130,{c:'var(--guide-l)'})
-      +`<path d="M760 ${h-120}L820 ${h-260}L880 ${h-120}Z" stroke="var(--guide-l)" stroke-width="1.2" fill="none"/>` }],
+    /* The example shows the METHOD, so the two rays must be the ones that
+       actually graze the sphere, and the shadow must END where they land.
+       Drawing a shadow that disagrees with its own construction lines would
+       teach the opposite of the drill. */
+    band:(w,h)=>{
+      const gy=h-24, lx=150, ly=12, cx=330, r=46, cy=gy-r;
+      const dist=Math.hypot(cx-lx,cy-ly), base=Math.atan2(cy-ly,cx-lx),
+            half=Math.asin(r/dist);
+      const hit=(t)=>{const a2=base+t*half; return lx+Math.cos(a2)*((gy-ly)/Math.sin(a2));};
+      const x1=hit(1), x2=hit(-1);
+      let s=K.line(0,gy,w,gy,{c:'var(--guide)',w:1})+K.dot(lx,ly,4,'var(--ink)')
+        +`<text x="${lx+13}" y="${ly+5}" fill="var(--muted)" font-size="11.5" font-family="Inter,system-ui,sans-serif" font-weight="500" letter-spacing=".9">LIGHT</text>`
+        +K.line(lx,ly,x1,gy,{c:'var(--guide-l)',w:1})
+        +K.line(lx,ly,x2,gy,{c:'var(--guide-l)',w:1});
+      s+=castShadow((x1+x2)/2,gy,Math.abs(x2-x1)/2,r*0.30,'m10b');
+      return s+K.ellipse(cx,cy,r,r,{c:'var(--ink)',w:1.6});
+    },
+    /* Light upper-left means the shadows fall down and to the right, so the
+       forms sit high on the ground line and the room is left below them. */
+    field:(w,h)=>{
+      const gy=h*0.46, R=66, BOX=180, CONE=170;
+      return K.line(0,gy,w,gy,{c:'var(--guide)',w:1})
+        + K.dot(96,44,4,'var(--ink)')
+        + `<text x="110" y="49" fill="var(--muted)" font-size="11.5" font-family="Inter,system-ui,sans-serif" font-weight="500" letter-spacing=".9">LIGHT</text>`
+        + K.ellipse(180,gy-R,R,R,{c:'var(--guide-l)',w:1.2})
+        + `<g transform="translate(400 ${(gy-BOX*0.62).toFixed(0)})">`
+        + K.isoBox(BOX,30,{filled:false,id:'m10box'})+`</g>`
+        + `<g transform="translate(660 ${(gy-CONE).toFixed(0)})">`
+        + K.coneAxis(90,CONE,90,14,50,{filled:false})+`</g>`;
+    } }],
   ['m11','光向','Light direction','Same cube, three lights.','20', {
-    layout:'A', rows:3, rowLabels:['左','上','右'],
-    example:(i,c)=>cube(c,true,'m11'+i,i), yours:(i,c)=>cube(c,false) }],
+    layout:'A', rows:3, cell:260, rowLabels:['左','上','右'],
+    example:(i,c)=>cube(c,3,'m11'+i,i), yours:(i,c)=>cube(c,null,'m11y'+i) }],
   ['m12','質感','Texture','Match each surface with line alone.','20–25', {
     layout:'A', rows:4, rowLabels:['木','石','布','水'],
     example:(i,c)=>TEXTURE[i](c,'m12'+i) }],
@@ -289,7 +336,8 @@ const FORM = [
     layout:'B', bare:true, field:(w,h)=>threePoint(w,h,'down') }],
   ['f10','回轉','Rotation','Turn the box in 15&deg; steps.','20', {
     layout:'A', rows:7, rowLabels:['0°','15°','30°','45°','60°','75°','90°'],
-    example:(i,c)=>rotBox(c,i*15,true), yours:(i,c)=>rotBox(c,i*15,false) }],
+    example:(i,c)=>rotBox(c,i*15,true),
+    yours:(i,c)=>K.line(c/2,c*0.16,c/2,c*0.84,{c:'var(--guide-l)',w:1}) }],
   ['f11','楕圓','Ellipse degrees','Ellipses open as they drop below eye level.','15', {
     layout:'A', rows:5, rowLabels:['10°','20°','35°','50°','70°'],
     example:(i,c)=>{const d=[10,20,35,50,70][i];
@@ -297,28 +345,28 @@ const FORM = [
         + K.ellipse(c/2,c/2,c*0.36,c*0.36*Math.sin(d*Math.PI/180));},
     yours:(i,c)=>K.line(c/2,10,c/2,c-10,{c:'var(--guide-l)'}) }],
   ['f12','圓柱','Cylinders','Both ends share one axis.','15–20', {
-    layout:'A', rows:3, rowLabels:['立','臥','傾'],
-    example:(i,c)=>cylAxis(c,i,true), yours:(i,c)=>cylAxis(c,i,false) }],
+    layout:'A', rows:3, cell:260, rowLabels:['立','臥','傾'],
+    example:(i,c)=>cylAxis(c,i,true), yours:(i,c)=>cylAxisGuide(c,i) }],
   ['f13','圓錐','Cones','Find the tip on the axis.','15', {
-    layout:'A', rows:3,
-    example:(i,c)=>cone(c,i,true), yours:(i,c)=>cone(c,i,false) }],
+    layout:'A', rows:3, cell:260, rowLabels:['立','傾','倒'],
+    example:(i,c)=>cone(c,i,true), yours:(i,c)=>coneGuide(c,i) }],
   ['f14','球','Spheres','Wrap the contour lines around the form.','15–20', {
-    layout:'A', rows:3,
+    layout:'A', rows:3, cell:260, rowLabels:['0°','28°','\u221222°'],
     example:(i,c)=>contourSphere(c,i,true), yours:(i,c)=>contourSphere(c,i,false) }],
   ['f15','複合','Combined forms','Join the box and cylinder cleanly.','20', {
-    layout:'A', rows:2,
+    layout:'A', rows:2, cell:365,
     example:(i,c)=>combined(c,i,true), yours:(i,c)=>combined(c,i,false) }],
   ['f16','積','Stacking','Balance four forms on each other.','20', {
     layout:'B', bare:true, field:(w,h)=>K.line(0,h-90,w,h-90,{c:'var(--guide)'})
       +K.rays(w/2,h*0.34,w,h,8)+K.vp(w/2,h*0.34,'VP') }],
   ['f17','斷面','Cross-sections','Slice the form. Show every section.','20', {
-    layout:'A', rows:3,
+    layout:'A', rows:3, cell:260,
     example:(i,c)=>section(c,i,true), yours:(i,c)=>section(c,i,false) }],
   ['f18','器','Vessel','Build the jar from ellipses.','20–25', {
-    layout:'A', rows:2, rowLabels:['壺','鉢'],
+    layout:'A', rows:2, cell:365, rowLabels:['壺','鉢'],
     example:(i,c)=>vessel(c,i,true), yours:(i,c)=>vessel(c,i,false) }],
   ['f19','物','Objects as boxes','Reduce each object to a box first.','20', {
-    layout:'A', rows:3, rowLabels:['書','盞','箱'],
+    layout:'A', rows:3, cell:260, rowLabels:['書','盞','箱'],
     example:(i,c)=>objBox(c,i,true), yours:(i,c)=>objBox(c,i,false) }],
   ['f20','綜合','Still life','Everything together. One page, no guides.','25+', {
     layout:'B', bare:true, field:(w,h)=>K.line(0,h-140,w,h-140,{c:'var(--guide)'}) }],
@@ -357,29 +405,72 @@ function gradBar(w,h,id){const y=40;let s='';
   for(let i=0;i<24;i++){const t=i/23,sp=12-t*9,wd=0.25+t*1.9;
     s+=`<g transform="translate(${i*w/24} ${y})">`+K.hatch(w/24+1,h,{angle:45,spacing:sp,width:wd,id:id+i})+`</g>`;}
   return s+K.rect(0,y,w,h,{c:'var(--guide-l)'});}
-function sphere(c,filled,id){const r=c*0.36;let s=K.ellipse(c/2,c/2,r,r,{c:filled?'var(--ink)':'var(--guide-l)',w:filled?1.6:1.2});
-  if(filled){s=`<clipPath id="sp${id}"><circle cx="${c/2}" cy="${c/2}" r="${r}"/></clipPath>`
-    +`<g clip-path="url(#sp${id})">`+K.hatch(c,c,{angle:35,spacing:6,width:1.5,id:'s'+id})+`</g>`+s;}
-  else s+=K.line(c*0.18,c*0.18,c*0.3,c*0.3,{c:'var(--guide)'});
-  return s;}
-function cube(c,filled,id,light=0){const u=c*0.26,cx=c/2,cy=c*0.54;
-  const top=`M${cx} ${cy-u*1.2}L${cx+u} ${cy-u*0.6}L${cx} ${cy}L${cx-u} ${cy-u*0.6}Z`;
-  const lf=`M${cx-u} ${cy-u*0.6}L${cx} ${cy}L${cx} ${cy+u*1.1}L${cx-u} ${cy+u*0.5}Z`;
-  const rt=`M${cx+u} ${cy-u*0.6}L${cx} ${cy}L${cx} ${cy+u*1.1}L${cx+u} ${cy+u*0.5}Z`;
-  const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+/* 墨 shading drills are STAGED: row i shows the drawing i steps in, so the
+   reader rebuilds the build-up rather than copying a finished picture four
+   times. YOURS always hands back the same starting outline. */
+const castShadow = (cx,cy,rx,ry,id)=>
+  `<clipPath id="cs${id}"><ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}"/></clipPath>`
+  + `<g clip-path="url(#cs${id})">`
+  + K.hatch(cx+rx+2, cy+ry+2, {angle:0, spacing:4, width:1.3, id:'csh'+id})
+  + `</g>`;
+
+const LIGHT = (c) => K.line(c*0.08,c*0.08,c*0.22,c*0.22,{c:'var(--guide)',w:1})
+  + `<path d="M${(c*0.16).toFixed(1)} ${(c*0.22).toFixed(1)}L${(c*0.22).toFixed(1)} ${(c*0.22).toFixed(1)}L${(c*0.22).toFixed(1)} ${(c*0.16).toFixed(1)}" stroke="var(--guide)" stroke-width="1" fill="none"/>`;
+
+function sphere(c,stage,id){
+  const r=c*0.28, cx=c*0.48, cy=c*0.44;
+  const outline=K.ellipse(cx,cy,r,r,{c:stage==null?'var(--guide-l)':'var(--ink)',w:stage==null?1.2:1.6});
+  if(stage==null) return outline+LIGHT(c);
+  let s=LIGHT(c);
+  if(stage>=1){   // terminator: the sphere minus a light-side disc
+    s+=`<mask id="sm${id}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="white"/>`
+      +`<circle cx="${(cx-r*0.5).toFixed(1)}" cy="${(cy-r*0.5).toFixed(1)}" r="${(r*1.02).toFixed(1)}" fill="black"/></mask>`
+      +`<g mask="url(#sm${id})">`+K.hatch(c,c,{angle:35,spacing:8,width:1.4,id:'sa'+id})+`</g>`;
+  }
+  if(stage>=2){   // core shadow — a second pass on the darker band
+    s+=`<mask id="sn${id}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="white"/>`
+      +`<circle cx="${(cx-r*0.32).toFixed(1)}" cy="${(cy-r*0.32).toFixed(1)}" r="${(r*1.0).toFixed(1)}" fill="black"/>`
+      +`<circle cx="${(cx+r*0.62).toFixed(1)}" cy="${(cy+r*0.62).toFixed(1)}" r="${(r*0.62).toFixed(1)}" fill="black"/></mask>`
+      +`<g mask="url(#sn${id})">`+K.hatch(c,c,{angle:125,spacing:6,width:1.5,id:'sb'+id})+`</g>`;
+  }
+  if(stage>=3){   // contact shadow on the ground
+    s+=K.line(0,c*0.78,c,c*0.78,{c:'var(--guide)',w:1})
+      +castShadow(cx+r*0.55,c*0.78,r*1.05,r*0.24,'m7'+id);
+  }
+  return s+outline;
+}
+
+function cube(c,stage,id,light=1){
+  /* value order is [top, near-left, near-right]; the light index rotates which
+     plane is lightest, which is the whole point of 光向 (m11). */
+  const sets=[[0.5,0.25,0.75],[0.25,0.5,0.75],[0.5,0.75,0.25]];
+  if(stage==null) return K.isoBox(c,32,{filled:false,id:'cbo'+id});
+  const v=sets[light]||sets[1];
+  const faces=stage>=3?v:stage>=2?v.slice(0,2):stage>=1?v.slice(0,1):null;
+  return K.isoBox(c,32,{filled:true,faces,id:'cb'+id});
+}
+
+function cylinder(c,stage,id){
+  const cx=c/2, y0=c*0.20, y1=c*0.74, r=c*0.19;
+  if(stage==null) return K.cylinderAxis(cx,y0,cx,y1,r,{filled:false,id:'cyo'+id});
   let s='';
-  if(filled){const v=[[0.25,0.5,0.75],[0.25,0.75,0.5],[0.5,0.75,0.25]][light]||[0.25,0.5,0.75];
-    [[top,v[0]],[lf,v[1]],[rt,v[2]]].forEach(([p,d],i)=>{
-      s+=`<clipPath id="cb${id}${i}"><path d="${p}"/></clipPath>`
-        +`<g clip-path="url(#cb${id}${i})">`+K.hatch(c,c,{angle:45,spacing:K.HATCH[d][0],width:K.HATCH[d][1],id:id+i})+`</g>`;});}
-  return s+[top,lf,rt].map((p)=>`<path d="${p}" stroke="${st}" stroke-width="${sw}" fill="none"/>`).join('');}
-function cylinder(c,filled,id){const rx=c*0.24,ry=c*0.09,cx=c/2,y0=c*0.22,y1=c*0.78;
-  const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;let s='';
-  if(filled){s+=`<clipPath id="cy${id}"><path d="M${cx-rx} ${y0}L${cx-rx} ${y1}A${rx} ${ry} 0 0 0 ${cx+rx} ${y1}L${cx+rx} ${y0}Z"/></clipPath>`
-    +`<g clip-path="url(#cy${id})">`+K.hatch(c,c,{angle:90,spacing:6,width:1.5,id:'c'+id})+`</g>`;}
-  return s+K.ellipse(cx,y0,rx,ry,{c:st,w:sw})
-    +K.line(cx-rx,y0,cx-rx,y1,{c:st,w:sw})+K.line(cx+rx,y0,cx+rx,y1,{c:st,w:sw})
-    +`<path d="M${cx-rx} ${y1}A${rx} ${ry} 0 0 0 ${cx+rx} ${y1}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;}
+  const body=`M${(cx-r).toFixed(1)} ${y0.toFixed(1)}L${(cx-r).toFixed(1)} ${y1.toFixed(1)}L${(cx+r).toFixed(1)} ${y1.toFixed(1)}L${(cx+r).toFixed(1)} ${y0.toFixed(1)}Z`;
+  if(stage>=1){   // strokes follow the curve: vertical, tightening to the right
+    s+=`<clipPath id="cl${id}"><path d="${body}"/></clipPath><g clip-path="url(#cl${id})">`
+      +K.hatch(c,c,{angle:90,spacing:9,width:1.3,id:'ca'+id})+`</g>`;
+  }
+  if(stage>=2){
+    const dark=`M${(cx+r*0.15).toFixed(1)} ${y0.toFixed(1)}L${(cx+r*0.15).toFixed(1)} ${y1.toFixed(1)}L${(cx+r).toFixed(1)} ${y1.toFixed(1)}L${(cx+r).toFixed(1)} ${y0.toFixed(1)}Z`;
+    s+=`<clipPath id="cd${id}"><path d="${dark}"/></clipPath><g clip-path="url(#cd${id})">`
+      +K.hatch(c,c,{angle:90,spacing:5,width:1.6,id:'cb'+id})+`</g>`;
+  }
+  if(stage>=3){
+    s+=K.line(0,c*0.82,c,c*0.82,{c:'var(--guide)',w:1})
+      +castShadow(cx+r*0.9,c*0.82,r*1.5,r*0.28,'m9'+id);
+  }
+  return s+K.cylinderAxis(cx,y0,cx,y1,r,{filled:true,id:'cy'+id});
+}
+
 const TEXTURE=[
   (c,id)=>{let s='';for(let i=0;i<9;i++){const y=14+i*(c-28)/8;
     s+=`<path d="M6 ${y}Q${c/3} ${y-7} ${c/2} ${y}T${c-6} ${y}" stroke="var(--ink)" stroke-width="1.2" fill="none"/>`;}return s;},
@@ -436,51 +527,100 @@ function threePoint(w,h,dir){const hy=dir==='up'?h*0.72:h*0.28,ty=dir==='up'?-h*
   for(const y of [y0,y1])s+=K.line(6,hy,x,y,{c:'var(--guide-l)'})+K.line(w-6,hy,x,y,{c:'var(--guide-l)'});
   for(const t of [0.3,0.48,0.66])s+=K.line(t*w,dir==='up'?h:0,x,ty,{c:'var(--guide-l)'});
   return s+`<text x="${x+16}" y="${dir==='up'?18:h-8}" fill="var(--muted)" font-size="11.5" font-family="Inter,system-ui,sans-serif" font-weight="500" letter-spacing=".9">VP · ${dir==='up'?'UP':'DOWN'}</text>`;}
-function rotBox(c,deg,filled){const r=deg*Math.PI/180,u=c*0.3,cx=c/2,cy=c*0.56;
+function rotBox(c,deg,filled){
+  return K.isoBox(c,deg,{filled,id:'rb'+deg+(filled?'e':'y')});
+}
+function cylAxis(c,i,filled){
+  /* 立 standing · 臥 lying · 傾 tilted — one axis, three attitudes */
+  const a=CYL_AX(c)[i];
+  const r=c*0.17;
+  return K.line(a[0],a[1],a[2],a[3],{c:'var(--guide)',w:1,dash:'4 5'})
+    + K.cylinderAxis(a[0],a[1],a[2],a[3],r,{filled,id:'cx'+i+(filled?'e':'y')});
+}
+const CYL_AX=(c)=>[[c/2,c*0.18,c/2,c*0.82],[c*0.16,c/2,c*0.84,c/2],[c*0.22,c*0.80,c*0.78,c*0.22]];
+const CONE_AX=(c)=>[[c/2,c*0.76,c/2,c*0.18],[c*0.30,c*0.78,c*0.72,c*0.24],[c/2,c*0.24,c/2,c*0.80]];
+/* YOURS gets the axis only — standing the two ellipses on one axis IS the drill */
+function cylAxisGuide(c,i){const a=CYL_AX(c)[i];
+  return K.line(a[0],a[1],a[2],a[3],{c:'var(--guide)',w:1,dash:'4 5'})
+    +K.dot(a[0],a[1],2.6,'var(--guide)')+K.dot(a[2],a[3],2.6,'var(--guide)');}
+function coneGuide(c,i){const a=CONE_AX(c)[i];
+  return K.line(a[0],a[1],a[2],a[3],{c:'var(--guide)',w:1,dash:'4 5'})
+    +K.dot(a[2],a[3],2.6,'var(--guide)');}
+function cone(c,i,filled){
+  const a=CONE_AX(c)[i];
+  return K.coneAxis(a[0],a[1],a[2],a[3],c*0.20,{filled});
+}
+function contourSphere(c,i,filled){
+  return K.sphereContours(c/2,c/2,c*0.30,[0,28,-22][i],{filled});
+}
+function combined(c,i,filled){
   const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  const dx=Math.cos(r)*u,dz=Math.sin(r)*u*0.42;
-  return `<path d="M${cx-dx} ${cy-dz}L${cx+dx} ${cy+dz}" stroke="${st}" stroke-width="${sw}"/>`
-    +K.rect(cx-u*0.7,cy-u*0.8,u*1.4,u*1.2,{c:st,sw});}
-function cylAxis(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  const a=[[c/2,c*0.2,c/2,c*0.8],[c*0.2,c/2,c*0.8,c/2],[c*0.24,c*0.76,c*0.76,c*0.24]][i];
-  let s=K.line(...a,{c:'var(--guide)',w:1});
-  if(filled){s+=K.ellipse(a[0],a[1],c*0.16,c*0.06,{c:st,w:sw})+K.ellipse(a[2],a[3],c*0.16,c*0.06,{c:st,w:sw});}
-  return s;}
-function cone(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  const cx=c/2,by=c*0.76,rx=c*0.24,ry=c*0.08,tip=[c*0.5,c*0.2][0];
-  let s=K.line(cx,c*0.18,cx,by,{c:'var(--guide)',w:1});
-  if(filled)s+=K.ellipse(cx,by,rx,ry,{c:st,w:sw})
-    +`<path d="M${cx-rx} ${by}L${cx} ${c*0.18}L${cx+rx} ${by}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
-  return s;}
-function contourSphere(c,i,filled){const r=c*0.32,cx=c/2,cy=c/2;
+  if(i===0)  // a box with a cylinder standing on it
+    return K.isoBox(c,28,{filled,id:'cm0'+(filled?'e':'y'),h:0.22})
+      + K.cylinderAxis(c*0.50,c*0.40,c*0.50,c*0.12,c*0.13,{filled,id:'cmc'+(filled?'e':'y')});
+  // a cone seated on a cylinder
+  return K.cylinderAxis(c*0.50,c*0.78,c*0.50,c*0.50,c*0.17,{filled,id:'cm1'+(filled?'e':'y')})
+    + K.coneAxis(c*0.50,c*0.50,c*0.50,c*0.16,c*0.17,{filled});
+}
+function section(c,i,filled){
+  /* one free curve, sliced — the sections show how the surface turns */
+  const curves=[
+    `M${c*0.16} ${c*0.70}C${c*0.28} ${c*0.22} ${c*0.72} ${c*0.28} ${c*0.84} ${c*0.66}`,
+    `M${c*0.16} ${c*0.34}C${c*0.34} ${c*0.80} ${c*0.66} ${c*0.18} ${c*0.84} ${c*0.62}`,
+    `M${c*0.18} ${c*0.78}C${c*0.30} ${c*0.34} ${c*0.62} ${c*0.72} ${c*0.82} ${c*0.28}`];
   const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  let s=K.ellipse(cx,cy,r,r,{c:st,w:sw});
-  if(filled)for(const t of [-0.6,-0.2,0.2,0.6])s+=K.ellipse(cx,cy+r*t,r*Math.sqrt(1-t*t),r*0.22,{c:'var(--guide)',w:1});
-  return s;}
-function combined(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  if(i===0)return K.rect(c*0.14,c*0.44,c*0.4,c*0.36,{c:st,sw})
-    +K.ellipse(c*0.66,c*0.34,c*0.16,c*0.06,{c:st,w:sw})
-    +K.line(c*0.5,c*0.34,c*0.5,c*0.7,{c:st,w:sw})+K.line(c*0.82,c*0.34,c*0.82,c*0.7,{c:st,w:sw});
-  return K.ellipse(c*0.5,c*0.66,c*0.2,c*0.07,{c:st,w:sw})
-    +`<path d="M${c*0.3} ${c*0.66}L${c*0.5} ${c*0.24}L${c*0.7} ${c*0.66}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;}
-function section(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  let s=`<path d="M${c*0.18} ${c*0.72}C${c*0.3} ${c*0.2} ${c*0.7} ${c*0.28} ${c*0.82} ${c*0.68}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
-  if(filled)for(const t of [0.34,0.5,0.66])s+=K.ellipse(c*t+c*0.06,c*0.46,c*0.1,c*0.04,{c:'var(--guide)',w:1});
-  return s;}
-function vessel(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  if(i===0){let s=`<path d="M${c*0.38} ${c*0.22}C${c*0.1} ${c*0.36} ${c*0.1} ${c*0.74} ${c*0.5} ${c*0.8}C${c*0.9} ${c*0.74} ${c*0.9} ${c*0.36} ${c*0.62} ${c*0.22}Z" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
-    if(filled)s+=K.ellipse(c*0.5,c*0.22,c*0.12,c*0.04,{c:'var(--guide)',w:1})+K.ellipse(c*0.5,c*0.52,c*0.4,c*0.1,{c:'var(--guide)',w:1});
-    return s;}
-  let s=`<path d="M${c*0.2} ${c*0.4}A${c*0.3} ${c*0.3} 0 0 0 ${c*0.8} ${c*0.4}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
-  if(filled)s+=K.ellipse(c*0.5,c*0.4,c*0.3,c*0.08,{c:'var(--guide)',w:1});
-  return s;}
-function objBox(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  const b=K.rect(c*0.2,c*0.32,c*0.6,c*0.42,{c:'var(--guide)',sw:1});
-  if(!filled)return b;
-  if(i===0)return b+K.rect(c*0.24,c*0.42,c*0.52,c*0.26,{c:st,sw});
-  if(i===1)return b+K.ellipse(c*0.5,c*0.4,c*0.14,c*0.05,{c:st,w:sw})
-    +K.line(c*0.36,c*0.4,c*0.4,c*0.68,{c:st,w:sw})+K.line(c*0.64,c*0.4,c*0.6,c*0.68,{c:st,w:sw});
-  return b+K.rect(c*0.26,c*0.38,c*0.48,c*0.3,{c:st,sw});}
+  let s=`<path d="${curves[i]}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  if(filled) for(const t of [0.3,0.5,0.7]){
+    const x=c*(0.16+0.68*t), y=c*(0.46+0.10*Math.sin(t*6+i));
+    s+=`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(c*0.09).toFixed(1)}" ry="${(c*0.032).toFixed(1)}" fill="none" stroke="var(--guide)" stroke-width="1"/>`;
+  }
+  return s;
+}
+function vessel(c,i,filled){
+  const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  if(i===0){  // 壺 — the moon jar, built from stacked ellipses
+    let s=`<path d="M${c*0.40} ${c*0.22}C${c*0.12} ${c*0.34} ${c*0.12} ${c*0.72} ${c*0.50} ${c*0.80}C${c*0.88} ${c*0.72} ${c*0.88} ${c*0.34} ${c*0.60} ${c*0.22}Z" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+    if(filled) s+=K.ellipse(c*0.50,c*0.22,c*0.10,c*0.035,{c:'var(--guide)',w:1})
+      +K.ellipse(c*0.50,c*0.50,c*0.375,c*0.115,{c:'var(--guide)',w:1})
+      +K.ellipse(c*0.50,c*0.80,c*0.085,c*0.03,{c:'var(--guide)',w:1});
+    return s;
+  }
+  let s=`<path d="M${c*0.22} ${c*0.38}C${c*0.26} ${c*0.74} ${c*0.74} ${c*0.74} ${c*0.78} ${c*0.38}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  if(filled) s+=K.ellipse(c*0.50,c*0.38,c*0.28,c*0.085,{c:'var(--guide)',w:1})
+    +K.ellipse(c*0.50,c*0.685,c*0.115,c*0.035,{c:'var(--guide)',w:1});
+  return s;
+}
+function objBox(c,i,filled){
+  /* the faint CAGE is the object's bounding box; the solid form sits inside it */
+  const prop=[{h:0.16,w:0.50,d:0.34},{h:0.34,w:0.38,d:0.30},{h:0.32,w:0.44,d:0.32}][i];
+  const cage=K.isoBox(c,26,{filled:false,cage:true,id:'ob'+i+(filled?'e':'y'),h:prop.h});
+  if(!filled) return cage;
+  const st='var(--ink)',sw=1.6;
+  if(i===0){   // 書 — a flat block on the floor of the cage, with a spine
+    const bk=K.boxPoints(c,26,{w:prop.w-0.02,d:prop.d-0.02,h:0.11});
+    return cage+K.isoBox(c,26,{filled:true,id:'obk',h:0.11})
+      +K.line(bk.top[0][0],bk.top[0][1],bk.top[3][0],bk.top[3][1],{c:st,w:1});
+  }
+  if(i===1)    // 盞 — an ellipse mouth and a tapering body inside the cage
+    return cage+K.ellipse(c*0.50,c*0.40,c*0.155,c*0.055,{c:st,w:sw})
+      +K.line(c*0.345,c*0.40,c*0.40,c*0.70,{c:st,w:sw})
+      +K.line(c*0.655,c*0.40,c*0.60,c*0.70,{c:st,w:sw})
+      +`<path d="M${c*0.40} ${c*0.70}A${c*0.10} ${c*0.04} 0 0 0 ${c*0.60} ${c*0.70}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  // 箱 — an open box: the rim sits just inside the cage, the far walls show
+  const o=K.boxPoints(c,26,{w:prop.w-0.04,d:prop.d-0.04,h:0.26});
+  const P=(pts)=>'M'+pts.map(([x,y])=>`${x.toFixed(1)} ${y.toFixed(1)}`).join('L')+'Z';
+  let s=cage+`<path d="${P(o.top)}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  let front=0; o.base.forEach(([,y],k)=>{ if(y>o.base[front][1]) front=k; });
+  const rear=(front+2)%4;
+  for(let k=0;k<4;k++) if(k!==rear)
+    s+=K.line(o.base[k][0],o.base[k][1],o.top[k][0],o.top[k][1],{c:st,w:sw});
+  for(const[k,j]of[[(front+3)%4,front],[front,(front+1)%4]])
+    s+=K.line(o.base[k][0],o.base[k][1],o.base[j][0],o.base[j][1],{c:st,w:sw});
+  // the inside of the two far walls, which is what makes it read as open
+  for(const[k,j]of[[rear,(rear+1)%4],[(rear+3)%4,rear]])
+    s+=K.line(o.base[k][0],o.base[k][1],o.base[j][0],o.base[j][1],{c:'var(--guide)',w:1});
+  return s;
+}
 
 /* ============================================================
    BUILD THE PAGE LIST  (§5)
@@ -723,3 +863,7 @@ console.log(`            + contents ${tocLinks} (52 drills + 3 free + 2 record)`
 console.log(`            + drill log ${logLinks}`);
 if (!texture) console.log('\u26a0  assets/inae/hanji-1080x1440.png missing \u2014 flat paper. Run: node tools/inae-texture.mjs');
 if (fontNote) console.log(fontNote);
+if (overflows.length) {
+  console.log(`\u26a0  ${overflows.length} page(s) overflow the body box:`);
+  for (const o of overflows) console.log('   ', o);
+}
