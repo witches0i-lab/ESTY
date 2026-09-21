@@ -10,7 +10,7 @@
 *{box-sizing:border-box;}
 
 /* ---- workspace (screen only; the print reset overrides this) ------------ */
-body{margin:0;background:#8f8778;font-family:var(--meta);color:var(--ink);
+body{margin:0;background:#8f8778;font-family:var(--meta-mix);color:var(--ink);
   display:flex;flex-direction:column;align-items:center;padding:48px 20px 96px;gap:28px;}
 
 /* ---- page frame --------------------------------------------------------- */
@@ -66,7 +66,7 @@ body{margin:0;background:#8f8778;font-family:var(--meta);color:var(--ink);
 /* layout A · Rows — left EXAMPLE cell → arrow → right YOURS cell (m01 sample) */
 .cell{position:absolute;}
 .cell.yours{border:1px solid var(--hair);}
-.rowlab{position:absolute;left:0;font-family:var(--display);font-size:21px;
+.rowlab{position:absolute;left:0;font-family:var(--display-mix);font-size:21px;
   font-weight:300;color:var(--ink);}
 
 /* layout B · Band — EXAMPLE strip on top, YOURS field beneath */
@@ -78,13 +78,13 @@ body{margin:0;background:#8f8778;font-family:var(--meta);color:var(--ink);
 .tick{position:absolute;background:var(--guide);}
 
 /* ---- record pages ------------------------------------------------------- */
-.logrow{position:absolute;font-size:13px;font-weight:500;color:var(--muted);
+.logrow{position:absolute;font-family:var(--meta-mix);font-size:13px;font-weight:500;color:var(--muted);
   letter-spacing:var(--ls-text);}
 .logbox{position:absolute;border:1px solid var(--hair);}
 
 /* ---- contents (x03) ----------------------------------------------------- */
 .tocsec{position:absolute;font-family:var(--han);font-size:19px;color:var(--ink);}
-.tocrow{position:absolute;font-size:13.5px;font-weight:500;color:var(--muted);
+.tocrow{position:absolute;font-family:var(--meta-mix);font-size:13.5px;font-weight:500;color:var(--muted);
   letter-spacing:var(--ls-text);white-space:nowrap;}
 .tocrow .n{color:var(--guide);}
 .tocrow .t{color:var(--ink);}

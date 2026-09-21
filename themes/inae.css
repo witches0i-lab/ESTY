@@ -25,9 +25,21 @@
      ⚠️  Not embedded yet: assets/inae/fonts/ is empty, so these currently
      fall back to system stacks. Embed as base64 before shipping —
      an external Google Fonts <link> can hang Chrome's print pipeline. */
-  --han:'Noto Serif KR',serif;              /* 한자 · 한글                  */
+  /* 한자·한글 first, then Newsreader for the latin that shares those runs
+     (digits and punctuation in lines like "매일 20분, 선과 여백의 기초").
+     Noto's subset here is CJK-only by design, so without Newsreader behind it
+     those characters drop to a system serif. */
+  --han:'Noto Serif KR','Newsreader',serif;
   --display:'Newsreader',Georgia,serif;     /* latin display                 */
   --meta:'Inter',system-ui,sans-serif;      /* meta labels + instructions    */
+
+  /* Mixed 한자+latin runs (§3.1: "one text node, per-run fonts"). A CSS
+     font-family LIST is exactly that — the browser takes each glyph from the
+     first family that has it, with no baseline split from separate nodes.
+     Without these, CJK set in a latin-only stack silently falls back to a
+     system CJK face and the page stops being INAE. */
+  --display-mix:'Newsreader','Noto Serif KR',Georgia,serif;
+  --meta-mix:'Inter','Noto Serif KR',system-ui,sans-serif;
 
   --t-title:38px;       /* page title            (§3.1)                      */
   --t-meta:12.5px;      /* meta row              (§3.1)                      */

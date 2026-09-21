@@ -3,7 +3,7 @@
 ## ── COMMON (applies to every journal theme in this repo) ──
 
 > ⚠️ "COMMON"은 **GOYO 라인의 저널 테마들**에 적용된다. 이 레포에는 라인이 둘 있다 —
-> **GOYO**(najeon/light/hanji + 스티커 가이드)와 **INAE**(`inae/`, 별개 라인).
+> **GOYO**(najeon/light/hanji + 스티커 가이드)와 **INAE**(드로잉 연습북, 별개 라인).
 > INAE에 COMMON을 통째로 적용하지 말 것: 어느 항목이 유효하고 어느 항목이 아닌지는
 > 아래 「INAE (이내) — 신규 라인」 섹션에 명시돼 있다.
 
@@ -142,8 +142,25 @@ pinned to 29 so the same file works in leap years) — this constant is duplicat
   `878:17110` m01 해칭 · `878:17402` b01 백지. 반영 절차는 스펙 §6.
 - **빌드:** `npm run drawingbook` 추가 + `npm run build` 체인 편입 (스펙 §2).
   PDF는 `tools/pdf.mjs`를 재사용한다 (새로 복사하지 말 것 — CDP 드라이버는 라인 중립 인프라).
-- **QA:** 스펙 §7 체크리스트 + `docs/link-test.md`에 링크 카운트 기록.
-- **상태: 스펙 확정, 구현 미착수.** 미결 항목은 스펙 §8.
+- **서체는 서브셋해서 임베드한다** (`tools/inae-fonts.mjs` → `assets/inae/fonts.css`).
+  연습북은 전 텍스트가 빌드 타임에 고정이라(독자는 그리지, 타이핑하지 않는다) 글자 목록이
+  닫혀 있다 → Noto Serif KR 풀셋 수 MB 대신 **실사용 190자 = 57KB**. 외부 `<link>`를
+  안 쓰는 이유는 GOYO와 같다(오프라인 렌더에서 Chrome 인쇄 파이프라인이 멈출 수 있음).
+  ⚠️ **카피를 바꾸면 2패스**: `drawingbook` → `inae-fonts` → `drawingbook`.
+  3패스째가 서브셋을 벗어난 글자를 잡아서 알려준다. `npm run build`에는 **일부러 안 넣었다**
+  — 네트워크가 필요해서 빌드가 오프라인으로 못 돌게 된다. `fonts.css`는 커밋돼 있다.
+  ⚠️ **한자·라틴 혼용 줄은 font-family 리스트로 처리한다** (`--display-mix` / `--meta-mix`,
+  `--han`도 Newsreader를 뒤에 둔다). 스펙 §3.1의 "단일 노드 + 구간별 폰트"가 이것이고,
+  CJK를 라틴 전용 스택에 두면 시스템 CJK 폰트로 조용히 폴백한다.
+- **종이 텍스처:** `tools/inae-texture.mjs` → `assets/inae/hanji-1080x1440.png`.
+  전면 RGB 래스터 1장을 문서에 1회만 임베드해 60페이지가 공유. **blend mode로 바꾸지 말 것**
+  — 중첩 투명 그룹은 일부 PDF 뷰어가 검게 합성한다(GOYO pine 레이어와 같은 함정).
+- **PDF:** `node tools/pdf.mjs inae` 로 이 타깃만 렌더 가능(라벨 필터). 전체는 405p × 3이라 느리다.
+- **QA:** 스펙 §7 체크리스트 + `docs/link-test.md` 하단 INAE 섹션.
+  현재 기준값: **60페이지 · 링크 522개**(탭 413 + 目次 57 + 드릴로그 52) · 폴백 서체 0건.
+- **상태: 1차 빌드 완료 (2026-09-21).** 60p·52드릴 생성, 서체 임베드, 링크 검증 통과.
+  남은 것은 스펙 §8 미결(표지 모티프·낙관·키워드 검증) + 墨 7–12 / 餘白 / 形 일부의
+  EXAMPLE 작화 품질 + f04 제목(Figma `Two-point perspective` vs 스펙 `Two-point box`) 확정.
 
 ## ── Adding a new theme later ──
 - Duplicate the GOYO theme-specific section, rename, and fill in that theme's specifics.

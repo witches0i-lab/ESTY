@@ -10,6 +10,8 @@
     "guide": "node tools/guide.mjs",
     "sticker-guide": "node tools/sticker-guide.mjs",
     "drawingbook": "node tools/drawingbook.mjs",
+    "inae-fonts": "node tools/inae-fonts.mjs",
+    "inae-texture": "node tools/inae-texture.mjs",
     "pdf": "node tools/pdf.mjs",
     "build": "node tools/planner.mjs && node tools/guide.mjs && node tools/sticker-guide.mjs && node tools/drawingbook.mjs && node tools/pdf.mjs"
   }
