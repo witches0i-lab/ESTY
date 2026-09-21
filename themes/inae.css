@@ -1,0 +1,51 @@
+/* ============================================================
+   INAE — design tokens   (spec: docs/drawingbook-spec.md §3.1–3.2)
+
+   ⚠️  THIS IS NOT A GOYO COLORWAY.
+   It only shares the themes/<name>.css filename convention. Never
+   register "inae" in the `themes` object/array of tools/planner.mjs,
+   tools/guide.mjs or tools/pdf.mjs — doing so leaks INAE tokens into
+   the GOYO najeon/light/hanji builds.
+   INAE is consumed only by tools/drawingbook.mjs.
+   ============================================================ */
+:root{
+  /* ---- palette (§3.2) --------------------------------------------------- */
+  --paper:#F2EDE4;      /* background (texture base #F3EEE6)                 */
+  --ink:#262322;        /* example strokes & fills, titles                   */
+  --guide:#B9AE9B;      /* drill guides                                      */
+  --guide-l:#D3C9B7;    /* faint guides                                      */
+  --hair:#CFC5B2;       /* rules, YOURS boxes                                */
+  --muted:#8C8172;      /* meta + instructions                               */
+  --seal:#9C4A3A;       /* seal mark — reserved, undecided (§8)              */
+
+  /* ---- type (§3.1) ------------------------------------------------------
+     Newsreader / Noto Serif KR / Inter, per the INAE foundation
+     (Figma `INAE journal` 770:11917). NOT GOYO's Bodoni Moda — sharing
+     GOYO's type makes INAE read as a GOYO variant in shop thumbnails.
+     ⚠️  Not embedded yet: assets/inae/fonts/ is empty, so these currently
+     fall back to system stacks. Embed as base64 before shipping —
+     an external Google Fonts <link> can hang Chrome's print pipeline. */
+  --han:'Noto Serif KR',serif;              /* 한자 · 한글                  */
+  --display:'Newsreader',Georgia,serif;     /* latin display                 */
+  --meta:'Inter',system-ui,sans-serif;      /* meta labels + instructions    */
+
+  --t-title:38px;       /* page title            (§3.1)                      */
+  --t-meta:12.5px;      /* meta row              (§3.1)                      */
+  --t-instr:15px;       /* instruction line                                  */
+  --t-label:11.5px;     /* EXAMPLE / YOURS / VP·L                            */
+  --ls-caps:.08em;      /* uppercase meta tracking 8%   (§3.1)               */
+  --ls-text:.01em;      /* mixed-case tracking 1%       (§3.1)               */
+
+  /* ---- page grid (§3.3) — 1080×1440, side margin 84 --------------------- */
+  --pw:1080px; --ph:1440px;
+  --mx:84px;            /* side margin → content width 912                   */
+  --y-tab:60px;         /* tab baseline                                      */
+  --y-tabrule:98px;     /* rule under tabs                                   */
+  --y-meta:168px;       /* meta row baseline                                 */
+  --y-title:214px;      /* title baseline                                    */
+  --y-instr:264px;      /* instruction baseline                              */
+  --y-body:356px;       /* body top                                          */
+  --y-bodyend:1310px;   /* body bottom                                       */
+  --y-footrule:1352px;  /* footer rule                                       */
+  --y-foot:1384px;      /* footer baseline                                   */
+}

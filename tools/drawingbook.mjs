@@ -1,0 +1,680 @@
+/* ============================================================
+   INAE Practice — drawing book generator
+   spec: docs/drawingbook-spec.md   (read it before editing this file)
+
+   Builds the real product: export/inae/inae-practice.html — 60 pages,
+   52 numbered drills, fully hyperlinked (tabs → sections, contents →
+   every drill, drill log → every drill). Undated: no year, no weekday,
+   no date anywhere.
+
+   Structure follows the STICKER GUIDE precedent (spec §2): one generator
+   file is the single source, there is no second hand-authored copy of the
+   markup to drift from. Page art comes from tools/drawingbook-kit.mjs.
+
+     node tools/drawingbook.mjs      # or: npm run drawingbook
+   ============================================================ */
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import * as K from './drawingbook-kit.mjs';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const read = (p) => readFileSync(join(root, p), 'utf8');
+
+const tokens = read('themes/inae.css');
+const base   = read('css/drawingbook.css');
+
+/* paper texture — one full-bleed raster, embedded ONCE and shared by every
+   page via a CSS custom property (spec §3.4). Generate it with
+   `node tools/inae-texture.mjs`; without it the pages fall back to flat paper. */
+const texPath = join(root, 'assets/inae/hanji-1080x1440.png');
+const texture = existsSync(texPath)
+  ? `:root{--paper-tex:url(data:image/png;base64,${readFileSync(texPath).toString('base64')});}`
+    + `.page{background-image:var(--paper-tex);}`
+  : '';
+
+const W = 912, H = 954;            // body box (§3.3)
+
+/* ============================================================
+   SECTIONS & NAV  (§3.5, §5)
+   ============================================================ */
+const SECTIONS = [
+  { key: 'toc', tab: '目次', first: 'x03' },
+  { key: 'l',   tab: '線',   first: 'l01', label: 'LINE',   mark: '一 線'   },
+  { key: 'm',   tab: '墨',   first: 'm01', label: 'INK',    mark: '二 墨'   },
+  { key: 's',   tab: '餘白', first: 's01', label: 'SPACE',  mark: '三 餘白' },
+  { key: 'f',   tab: '形',   first: 'f01', label: 'FORM',   mark: '四 形'   },
+  { key: 'b',   tab: '自由', first: 'b01', label: 'FREE',   mark: '五 自由' },
+  { key: 'r',   tab: '記錄', first: 'r01', label: 'RECORD', mark: '記錄'    },
+];
+const sec = (k) => SECTIONS.find((s) => s.key === k);
+
+/* anchor scheme: p-{id} (§3.3 footer format, already baked into the Figma
+   comps). NOTE: GOYO also uses a `p-` prefix, so `p-m01` means January's
+   monthly page there and INK drill 1 here. Separate PDFs, so no runtime
+   collision — but check which product you are in before trusting an id. */
+const aid = (id) => `p-${id}`;
+
+function tabs(activeKey) {
+  return `<nav class="tabs">` + SECTIONS.map((s) =>
+    `<a class="tab${s.key === activeKey ? ' on' : ''}" href="#${aid(s.first)}">${s.tab}</a>`
+  ).join('') + `</nav><div class="tabrule"></div>`;
+}
+
+/* ============================================================
+   PAGE SHELL  (§3.3)
+   ============================================================ */
+function page(p, bodyHtml) {
+  const s = sec(p.key);
+  const metaL = p.drill
+    ? `${s.label} · DRILL ${String(p.drill).padStart(2, '0')}`
+    : (p.metaL || '');
+  const head = p.title ? `<h1 class="title">${p.title}</h1>` : '';
+  const instr = p.instr ? `<div class="instr">${p.instr}</div>` : '';
+  return `<div class="page" id="${aid(p.id)}">
+${tabs(p.key)}
+${metaL ? `<div class="meta l">${metaL}</div>` : ''}
+${p.time ? `<div class="meta r">${p.time} MIN</div>` : ''}
+${head}${instr}
+<div class="body">${bodyHtml}</div>
+<div class="footrule"></div>
+<div class="foot l">${s.mark || ''}</div>
+<div class="foot r">${aid(p.id)} · ${p.folio}</div>
+</div>`;
+}
+
+/* title helper — ONE text node, per-run fonts (§3.1: splitting 한자 and latin
+   into separate nodes misaligns the baseline) */
+const T = (han, latin) =>
+  `<span class="han">${han}</span><span class="sep">·</span>${latin}`;
+
+/* ============================================================
+   LAYOUTS  (§4)
+   A · Rows  — EXAMPLE cell → arrow → YOURS cell, repeated
+   B · Band  — EXAMPLE strip on top, YOURS field beneath
+   ============================================================ */
+const A_EX = 122, A_YO = 480;                 // cell x, from the m01 comp
+function rowsGeom(n) {
+  const gap = 54;
+  const cell = Math.min(180, Math.floor((H - 30 - gap * (n - 1)) / n));
+  return { cell, pitch: cell + gap, top: 30 };
+}
+
+function layoutA(p) {
+  const n = p.rows, g = rowsGeom(n);
+  let svg = '', html = '';
+  html += `<div class="lab" style="left:${A_EX}px;top:-18px">EXAMPLE</div>`
+        + `<div class="lab" style="left:${A_YO}px;top:-18px">YOURS</div>`;
+  for (let i = 0; i < n; i++) {
+    const y = g.top + i * g.pitch, c = g.cell;
+    if (p.rowLabels?.[i])
+      html += `<div class="rowlab" style="top:${y + c / 2 - 14}px">${p.rowLabels[i]}</div>`;
+    // EXAMPLE — art supplied by the drill
+    svg += `<g transform="translate(${A_EX} ${y})">${p.example ? p.example(i, c, g) : ''}</g>`;
+    svg += K.rect(A_EX, y, c, c, { c: 'var(--hair)' });
+    // arrow
+    const my = y + c / 2;
+    svg += K.line(A_EX + c + 45, my, A_EX + c + 77, my, { c: 'var(--guide)' })
+        +  `<path d="M${A_EX + c + 70} ${my - 4}L${A_EX + c + 77} ${my}L${A_EX + c + 70} ${my + 4}" `
+        +  `stroke="var(--guide)" stroke-width="1" fill="none"/>`;
+    // YOURS — empty box plus whatever faint guide the drill asks for
+    svg += `<g transform="translate(${A_YO} ${y})">${p.yours ? p.yours(i, c, g) : ''}</g>`;
+    svg += K.rect(A_YO, y, c, c, { c: 'var(--hair)' });
+  }
+  return html + K.svg(W, H, svg);
+}
+
+const B_BAND = 200, B_GAP = 24;
+function layoutB(p) {
+  const fy = p.bare ? 0 : B_BAND + B_GAP;
+  const fh = H - fy;
+  let svg = '', html = '';
+  if (!p.bare) {
+    html += `<div class="lab" style="left:0;top:-18px">EXAMPLE</div>`
+          + `<div class="lab" style="left:0;top:${fy - 18}px">YOURS</div>`;
+    svg += `<g>${p.band ? p.band(W, B_BAND) : ''}</g>`;
+  }
+  svg += `<g transform="translate(0 ${fy})">${p.field ? p.field(W, fh) : ''}</g>`;
+  svg += K.rect(0, fy, W, fh, { c: 'var(--hair)' });
+  return html + K.svg(W, H, svg);
+}
+
+/* ============================================================
+   DRILL TABLE  (§5) — id, title, instruction, layout, minutes
+   The art closures render into body coordinates.
+   ============================================================ */
+const seeded = K.rng;
+
+const LINE = [
+  ['l01','橫線','Horizontal lines','Connect each pair of dots in one stroke.','5–10', {
+    layout:'B', band:(w)=>K.dotPairs({rows:2,len:780,pitch:64,x:66,y:70}),
+    field:(w,h)=>K.dotPairs({rows:12,len:780,pitch:64,x:66,y:40}) }],
+  ['l02','縱線','Vertical lines','Top to bottom. Don&rsquo;t slow down at the end.','5–10', {
+    layout:'B', band:(w)=>K.dotPairs({rows:3,len:140,pitch:92,x:120,y:30,vertical:true}),
+    field:(w,h)=>K.dotPairs({rows:10,len:700,pitch:92,x:42,y:15,vertical:true}) }],
+  ['l03','斜線','Diagonals','Both directions. Keep the angle steady.','5–10', {
+    layout:'B',
+    band:(w)=>diagPairs(w,B_BAND,2,45)+diagPairs(w,B_BAND,2,-30),
+    field:(w,h)=>diagPairs(w,h,8,45)+diagPairs(w,h,8,-30) }],
+  ['l04','連點','Connect the points','Join the numbered points in order.','10', {
+    layout:'B', bare:true, field:(w,h)=>numberedScatter(w,h,24,4204) }],
+  ['l05','平行','Parallel lines','Add five lines beside the given one. Keep the gap even.','10', {
+    layout:'A', rows:6,
+    example:(i,c)=>K.line(10,c/2,c-10,c/2,{c:'var(--ink)',w:1.6}),
+    yours:(i,c)=>K.line(10,c/2,c-10,c/2,{c:'var(--guide-l)',w:1.6}) }],
+  ['l06','長線','Long lines','Edge to edge. Use your shoulder, not your wrist.','5–10', {
+    layout:'B', band:(w)=>K.dotPairs({rows:2,len:912,pitch:80,x:0,y:60}),
+    field:(w,h)=>K.dotPairs({rows:8,len:912,pitch:90,x:0,y:45}) }],
+  ['l07','弧','Arcs','Pass through all three points.','10', {
+    layout:'B', band:(w,h)=>arcSets(w,h,3,1,true),
+    field:(w,h)=>arcSets(w,h,4,3,false) }],
+  ['l08','圓','Circles','One motion per circle. Do not correct.','10', {
+    layout:'B',
+    band:(w,h)=>K.rect(0,20,140,140,{c:'var(--guide-l)'})+K.ellipse(70,90,62,62),
+    field:(w,h)=>boxGrid(w,h,5,4,140,{guide:true}) }],
+  ['l09','楕圓','Ellipses in boxes','Touch all four sides of each box.','10–15', {
+    layout:'A', rows:5, rowLabels:['1 : 0.2','1 : 0.35','1 : 0.5','1 : 0.65','1 : 0.8'],
+    example:(i,c)=>{const r=[0.2,0.35,0.5,0.65,0.8][i],bh=c*0.8*r+20,by=(c-bh)/2;
+      return K.rect(20,by,c-40,bh,{c:'var(--guide-l)'})+K.ellipse(c/2,c/2,(c-40)/2,bh/2);},
+    yours:(i,c)=>{const r=[0.2,0.35,0.5,0.65,0.8][i],bh=c*0.8*r+20,by=(c-bh)/2;
+      return K.rect(20,by,c-40,bh,{c:'var(--guide-l)'});} }],
+  ['l10','螺旋','Spirals','From the center out. Keep the spacing even.','10', {
+    layout:'B', band:(w,h)=>K.spiral(110,100,4,22),
+    field:(w,h)=>[0,1,2,3].map((i)=>K.dot(140+i*210,h/2,2.6,'var(--guide)')).join('') }],
+  ['l11','輪郭','Contour','Trace the outline, then draw it again beside it.','15', {
+    layout:'A', rows:3, rowLabels:['葉','壺','石'],
+    example:(i,c)=>CONTOUR[i](c,'var(--ink)',1.6),
+    yours:(i,c)=>CONTOUR[i](c,'var(--guide-l)',1) }],
+  ['l12','强弱','Line weight','Press, then release. One line, three weights.','10', {
+    layout:'A', rows:3, rowLabels:['0.8','1.6','3.2'],
+    example:(i,c)=>K.taper(12,c/2,c-24,[0.8,1.6,3.2][i]*0.35,[0.8,1.6,3.2][i]),
+    yours:(i,c)=>K.line(12,c/2,c-12,c/2,{c:'var(--guide-l)',w:0.8}) }],
+];
+
+const INK = [
+  ['m01','四段 濃淡','Four values','Match the density on the left. One direction only, one pen.','15–25', {
+    layout:'A', rows:4, rowLabels:['25%','50%','75%','100%'],
+    example:(i,c)=>K.valueBox(c,c,[0.25,0.5,0.75,1][i],'m01'+i) }],
+  ['m02','交叉','Cross-hatching','Add one layer per step.','15–25', {
+    layout:'A', rows:4, rowLabels:['1','2','3','4'],
+    example:(i,c)=>[45,135,0,90].slice(0,i+1)
+      .map((a,j)=>K.hatch(c,c,{angle:a,spacing:8,width:1.4,id:'m02'+i+j})).join('') }],
+  ['m03','點描','Stippling','Dots only. Build the value slowly.','20–25', {
+    layout:'A', rows:3, rowLabels:['25%','50%','75%'],
+    example:(i,c)=>K.stipple(c,c,[20,55,110][i],7300+i) }],
+  ['m04','亂線','Scribble','Loose loops. Control the density, not the shape.','10–15', {
+    layout:'A', rows:3, rowLabels:['疎','中','密'],
+    example:(i,c)=>scribble(c,c,[90,220,420][i],9100+i) }],
+  ['m05','七段','Seven-step scale','Fill each cell one step darker than the last.','15', {
+    layout:'B', band:(w,h)=>stepBar(w,h,7,true),
+    field:(w,h)=>stepBar(w,h,7,false) }],
+  ['m06','漸層','Gradient','Light to dark without visible steps.','15', {
+    layout:'B', band:(w,h)=>gradBar(w,120,'m06b'),
+    field:(w,h)=>K.rect(0,(h-120)/2,w,120,{c:'var(--guide-l)'}) }],
+  ['m07','球','Shade a sphere','Light from the upper left.','15–20', {
+    layout:'A', rows:2, example:(i,c)=>sphere(c,true,'m07'+i), yours:(i,c)=>sphere(c,false) }],
+  ['m08','六面體','Shade a cube','Three faces, three values.','15', {
+    layout:'A', rows:2, example:(i,c)=>cube(c,true,'m08'+i), yours:(i,c)=>cube(c,false) }],
+  ['m09','圓柱','Shade a cylinder','Follow the curve with your strokes.','15–20', {
+    layout:'A', rows:2, example:(i,c)=>cylinder(c,true,'m09'+i), yours:(i,c)=>cylinder(c,false) }],
+  ['m10','影','Cast shadows','Find where the light stops.','20', {
+    layout:'B',
+    band:(w,h)=>K.line(0,h-30,w,h-30,{c:'var(--guide)'})+K.dot(150,40,4,'var(--ink)')
+      +K.ellipse(430,h-70,44,44)+K.ellipse(520,h-28,80,14,{c:'var(--guide-l)',w:1}),
+    field:(w,h)=>K.line(0,h-120,w,h-120,{c:'var(--guide)'})+K.dot(150,60,4,'var(--ink)')
+      +K.ellipse(300,h-190,56,56,{c:'var(--guide-l)',w:1.2})
+      +K.rect(470,h-250,130,130,{c:'var(--guide-l)'})
+      +`<path d="M760 ${h-120}L820 ${h-260}L880 ${h-120}Z" stroke="var(--guide-l)" stroke-width="1.2" fill="none"/>` }],
+  ['m11','光向','Light direction','Same cube, three lights.','20', {
+    layout:'A', rows:3, rowLabels:['左','上','右'],
+    example:(i,c)=>cube(c,true,'m11'+i,i), yours:(i,c)=>cube(c,false) }],
+  ['m12','質感','Texture','Match each surface with line alone.','20–25', {
+    layout:'A', rows:4, rowLabels:['木','石','布','水'],
+    example:(i,c)=>TEXTURE[i](c,'m12'+i) }],
+];
+
+const SPACE = [
+  ['s01','餘白 一','Negative space','Fill only the space around the object.','15–20', {
+    layout:'A', rows:2, example:(i,c)=>negSpace(SIL.chair,c,true,'s01'+i),
+    yours:(i,c)=>negSpace(SIL.chair,c,false) }],
+  ['s02','餘白 二','Negative space','Fill only the space around the object.','15–20', {
+    layout:'A', rows:2, example:(i,c)=>negSpace(SIL.bowl,c,true,'s02'+i),
+    yours:(i,c)=>negSpace(SIL.bowl,c,false) }],
+  ['s03','餘白 三','Negative space','Fill only the space around the object.','20', {
+    layout:'A', rows:2, example:(i,c)=>negSpace(SIL.branch,c,true,'s03'+i),
+    yours:(i,c)=>negSpace(SIL.branch,c,false) }],
+  ['s04','黑白','Notan','Two values only. Decide what is dark.','15', {
+    layout:'B', bare:true, field:(w,h)=>K.frames(w,3,2,{gap:30}).svg }],
+  ['s05','三分','Thirds','Place the subject on a line, not the center.','15', {
+    layout:'B', bare:true, field:(w,h)=>K.frames(w,3,2,{gap:30,thirds:true}).svg }],
+  ['s06','裁斷','Crop','Redraw each crop from the scene above.','20', {
+    layout:'B', band:(w,h)=>scene(w,h),
+    field:(w,h)=>K.frames(w,4,1,{gap:26}).svg }],
+  ['s07','均衡','Balance','Add one shape to balance the frame.','10–15', {
+    layout:'A', rows:4,
+    example:(i,c)=>K.ellipse(c*0.28,c*0.6,c*0.16,c*0.16,{fill:'var(--ink)',c:'none',w:0}),
+    yours:(i,c)=>K.ellipse(c*0.28,c*0.6,c*0.16,c*0.16,{c:'var(--guide-l)',w:1.2}) }],
+  ['s08','比較','Compare','One subject, three placements.','15–20', {
+    layout:'A', rows:3, rowLabels:['中','三分','端'],
+    example:(i,c)=>K.rect(4,4,c-8,c-8,{c:'var(--guide-l)'})
+      + K.ellipse([c/2,c/3,c*0.86][i],c/2,16,16,{fill:'var(--ink)',c:'none',w:0}),
+    yours:(i,c)=>K.rect(4,4,c-8,c-8,{c:'var(--guide-l)'}) }],
+];
+
+const FORM = [
+  ['f01','一點透視','One-point box','Pull the front face back to the vanishing point.','15', {
+    layout:'B', bare:true, field:(w,h)=>onePoint(w,h,6) }],
+  ['f02','一點透視','Room','Draw the room you are standing in.','20', {
+    layout:'B', bare:true, field:(w,h)=>K.rays(w/2,h/2,w,h,10)
+      +K.rect(w/2-180,h/2-135,360,270,{c:'var(--ink)',sw:1.6})+K.vp(w/2,h/2,'VP') }],
+  ['f03','一點透視','Corridor','Place the posts at equal steps.','20', {
+    layout:'B', bare:true, field:(w,h)=>corridor(w,h) }],
+  ['f04','二點透視','Two-point box','Trace the guides. Then draw the same box with the guides ignored.','15–25', {
+    layout:'B', bare:true, field:(w,h)=>twoPoint(w,h,true) }],
+  ['f05','二點透視','Stacked boxes','Stack three. Keep every edge on its point.','20', {
+    layout:'B', bare:true, field:(w,h)=>twoPoint(w,h,false,{floor:true}) }],
+  ['f06','二點透視','Block building','Add windows that shrink toward the points.','25', {
+    layout:'B', bare:true, field:(w,h)=>twoPoint(w,h,false,{mass:true}) }],
+  ['f07','二點透視','Above and below','Two boxes over the horizon, two under.','20', {
+    layout:'B', bare:true, field:(w,h)=>twoPoint(w,h,false,{edges:4}) }],
+  ['f08','三點透視','Worm&rsquo;s eye','The third point is above you.','20–25', {
+    layout:'B', bare:true, field:(w,h)=>threePoint(w,h,'up') }],
+  ['f09','三點透視','Bird&rsquo;s eye','The third point is below you.','20–25', {
+    layout:'B', bare:true, field:(w,h)=>threePoint(w,h,'down') }],
+  ['f10','回轉','Rotation','Turn the box in 15&deg; steps.','20', {
+    layout:'A', rows:7, rowLabels:['0°','15°','30°','45°','60°','75°','90°'],
+    example:(i,c)=>rotBox(c,i*15,true), yours:(i,c)=>rotBox(c,i*15,false) }],
+  ['f11','楕圓','Ellipse degrees','Ellipses open as they drop below eye level.','15', {
+    layout:'A', rows:5, rowLabels:['10°','20°','35°','50°','70°'],
+    example:(i,c)=>{const d=[10,20,35,50,70][i];
+      return K.line(c/2,10,c/2,c-10,{c:'var(--guide-l)'})
+        + K.ellipse(c/2,c/2,c*0.36,c*0.36*Math.sin(d*Math.PI/180));},
+    yours:(i,c)=>K.line(c/2,10,c/2,c-10,{c:'var(--guide-l)'}) }],
+  ['f12','圓柱','Cylinders','Both ends share one axis.','15–20', {
+    layout:'A', rows:3, rowLabels:['立','臥','傾'],
+    example:(i,c)=>cylAxis(c,i,true), yours:(i,c)=>cylAxis(c,i,false) }],
+  ['f13','圓錐','Cones','Find the tip on the axis.','15', {
+    layout:'A', rows:3,
+    example:(i,c)=>cone(c,i,true), yours:(i,c)=>cone(c,i,false) }],
+  ['f14','球','Spheres','Wrap the contour lines around the form.','15–20', {
+    layout:'A', rows:3,
+    example:(i,c)=>contourSphere(c,i,true), yours:(i,c)=>contourSphere(c,i,false) }],
+  ['f15','複合','Combined forms','Join the box and cylinder cleanly.','20', {
+    layout:'A', rows:2,
+    example:(i,c)=>combined(c,i,true), yours:(i,c)=>combined(c,i,false) }],
+  ['f16','積','Stacking','Balance four forms on each other.','20', {
+    layout:'B', bare:true, field:(w,h)=>K.line(0,h-90,w,h-90,{c:'var(--guide)'})
+      +K.rays(w/2,h*0.34,w,h,8)+K.vp(w/2,h*0.34,'VP') }],
+  ['f17','斷面','Cross-sections','Slice the form. Show every section.','20', {
+    layout:'A', rows:3,
+    example:(i,c)=>section(c,i,true), yours:(i,c)=>section(c,i,false) }],
+  ['f18','器','Vessel','Build the jar from ellipses.','20–25', {
+    layout:'A', rows:2, rowLabels:['壺','鉢'],
+    example:(i,c)=>vessel(c,i,true), yours:(i,c)=>vessel(c,i,false) }],
+  ['f19','物','Objects as boxes','Reduce each object to a box first.','20', {
+    layout:'A', rows:3, rowLabels:['書','盞','箱'],
+    example:(i,c)=>objBox(c,i,true), yours:(i,c)=>objBox(c,i,false) }],
+  ['f20','綜合','Still life','Everything together. One page, no guides.','25+', {
+    layout:'B', bare:true, field:(w,h)=>K.line(0,h-140,w,h-140,{c:'var(--guide)'}) }],
+];
+
+/* ---- small shape helpers used above ---- */
+function diagPairs(w,h,n,deg){const r=deg*Math.PI/180,len=Math.min(w/(n+1),h*0.8);let s='';
+  for(let i=0;i<n;i++){const x=40+i*(w-80)/n,y=h*0.15;
+    s+=K.dot(x,y)+K.dot(x+len*Math.cos(r),y+len*Math.sin(r)>0?y+len*Math.sin(r):y-len*Math.sin(r));}
+  return s;}
+function numberedScatter(w,h,n,seed){const r=K.rng(seed);let s='';
+  for(let i=0;i<n;i++){const x=40+r()*(w-80),y=40+r()*(h-80);
+    s+=K.dot(x,y,3.2)+`<text x="${(x+9).toFixed(1)}" y="${(y-8).toFixed(1)}" fill="var(--muted)" font-size="11" font-family="Inter,system-ui,sans-serif" font-weight="500">${i+1}</text>`;}
+  return s;}
+function arcSets(w,h,cols,rows,filled){let s='';const cw=w/cols,ch=h/rows;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=c*cw+cw*0.15,y=r*ch+ch*0.5,sp=cw*0.7;
+    const p=[[x,y],[x+sp/2,y-ch*0.26],[x+sp,y]];
+    s+=p.map(([px,py])=>K.dot(px,py,3)).join('');
+    if(filled)s+=K.arc3(...p[0],...p[1],...p[2]);}
+  return s;}
+function boxGrid(w,h,cols,rows,size,{guide}={}){let s='';
+  const gx=(w-cols*size)/(cols+1),gy=(h-rows*size)/(rows+1);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=gx+c*(size+gx),y=gy+r*(size+gy);
+    s+=K.rect(x,y,size,size,{c:guide?'var(--guide-l)':'var(--hair)'});}
+  return s;}
+function scribble(w,h,steps,seed){const r=K.rng(seed);let d=`M${w/2} ${h/2}`,x=w/2,y=h/2;
+  for(let i=0;i<steps;i++){x+=(r()-0.5)*26;y+=(r()-0.5)*26;
+    x=Math.max(6,Math.min(w-6,x));y=Math.max(6,Math.min(h-6,y));d+=`L${x.toFixed(1)} ${y.toFixed(1)}`;}
+  return `<path d="${d}" stroke="var(--ink)" stroke-width="1" fill="none"/>`;}
+function stepBar(w,h,n,filled){const bw=w/n,y=(h-140)/2;let s='';
+  for(let i=0;i<n;i++){s+=K.rect(i*bw,y,bw,140,{c:'var(--hair)'});
+    if(filled){const v=1-i/(n-1)*0.9;s+=`<g transform="translate(${i*bw} ${y})">`
+      +K.hatch(bw,140,{angle:45,spacing:Math.max(3,10-i*1.2),width:1+i*0.25,id:'sb'+i})+`</g>`;}}
+  return s;}
+function gradBar(w,h,id){const y=40;let s='';
+  for(let i=0;i<24;i++){const t=i/23,sp=12-t*9,wd=0.25+t*1.9;
+    s+=`<g transform="translate(${i*w/24} ${y})">`+K.hatch(w/24+1,h,{angle:45,spacing:sp,width:wd,id:id+i})+`</g>`;}
+  return s+K.rect(0,y,w,h,{c:'var(--guide-l)'});}
+function sphere(c,filled,id){const r=c*0.36;let s=K.ellipse(c/2,c/2,r,r,{c:filled?'var(--ink)':'var(--guide-l)',w:filled?1.6:1.2});
+  if(filled){s=`<clipPath id="sp${id}"><circle cx="${c/2}" cy="${c/2}" r="${r}"/></clipPath>`
+    +`<g clip-path="url(#sp${id})">`+K.hatch(c,c,{angle:35,spacing:6,width:1.5,id:'s'+id})+`</g>`+s;}
+  else s+=K.line(c*0.18,c*0.18,c*0.3,c*0.3,{c:'var(--guide)'});
+  return s;}
+function cube(c,filled,id,light=0){const u=c*0.26,cx=c/2,cy=c*0.54;
+  const top=`M${cx} ${cy-u*1.2}L${cx+u} ${cy-u*0.6}L${cx} ${cy}L${cx-u} ${cy-u*0.6}Z`;
+  const lf=`M${cx-u} ${cy-u*0.6}L${cx} ${cy}L${cx} ${cy+u*1.1}L${cx-u} ${cy+u*0.5}Z`;
+  const rt=`M${cx+u} ${cy-u*0.6}L${cx} ${cy}L${cx} ${cy+u*1.1}L${cx+u} ${cy+u*0.5}Z`;
+  const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  let s='';
+  if(filled){const v=[[0.25,0.5,0.75],[0.25,0.75,0.5],[0.5,0.75,0.25]][light]||[0.25,0.5,0.75];
+    [[top,v[0]],[lf,v[1]],[rt,v[2]]].forEach(([p,d],i)=>{
+      s+=`<clipPath id="cb${id}${i}"><path d="${p}"/></clipPath>`
+        +`<g clip-path="url(#cb${id}${i})">`+K.hatch(c,c,{angle:45,spacing:K.HATCH[d][0],width:K.HATCH[d][1],id:id+i})+`</g>`;});}
+  return s+[top,lf,rt].map((p)=>`<path d="${p}" stroke="${st}" stroke-width="${sw}" fill="none"/>`).join('');}
+function cylinder(c,filled,id){const rx=c*0.24,ry=c*0.09,cx=c/2,y0=c*0.22,y1=c*0.78;
+  const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;let s='';
+  if(filled){s+=`<clipPath id="cy${id}"><path d="M${cx-rx} ${y0}L${cx-rx} ${y1}A${rx} ${ry} 0 0 0 ${cx+rx} ${y1}L${cx+rx} ${y0}Z"/></clipPath>`
+    +`<g clip-path="url(#cy${id})">`+K.hatch(c,c,{angle:90,spacing:6,width:1.5,id:'c'+id})+`</g>`;}
+  return s+K.ellipse(cx,y0,rx,ry,{c:st,w:sw})
+    +K.line(cx-rx,y0,cx-rx,y1,{c:st,w:sw})+K.line(cx+rx,y0,cx+rx,y1,{c:st,w:sw})
+    +`<path d="M${cx-rx} ${y1}A${rx} ${ry} 0 0 0 ${cx+rx} ${y1}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;}
+const TEXTURE=[
+  (c,id)=>{let s='';for(let i=0;i<9;i++){const y=14+i*(c-28)/8;
+    s+=`<path d="M6 ${y}Q${c/3} ${y-7} ${c/2} ${y}T${c-6} ${y}" stroke="var(--ink)" stroke-width="1.2" fill="none"/>`;}return s;},
+  (c,id)=>K.stipple(c,c,70,4400),
+  (c,id)=>K.hatch(c,c,{angle:45,spacing:7,width:1.2,id:id+'a'})+K.hatch(c,c,{angle:135,spacing:7,width:1.2,id:id+'b'}),
+  (c,id)=>{let s='';for(let i=0;i<10;i++){const y=12+i*(c-24)/9;
+    for(let x=8;x<c-8;x+=34)s+=K.line(x,y,x+20,y,{c:'var(--ink)',w:1.3});}return s;},
+];
+const CONTOUR=[
+  (c,col,w)=>`<path d="M${c*0.5} ${c*0.16}C${c*0.82} ${c*0.3} ${c*0.82} ${c*0.7} ${c*0.5} ${c*0.86}C${c*0.18} ${c*0.7} ${c*0.18} ${c*0.3} ${c*0.5} ${c*0.16}Z" stroke="${col}" stroke-width="${w}" fill="none"/>`
+    +K.line(c*0.5,c*0.16,c*0.5,c*0.86,{c:col,w:w*0.6}),
+  (c,col,w)=>`<path d="M${c*0.5} ${c*0.16}C${c*0.86} ${c*0.2} ${c*0.88} ${c*0.74} ${c*0.5} ${c*0.84}C${c*0.12} ${c*0.74} ${c*0.14} ${c*0.2} ${c*0.5} ${c*0.16}Z" stroke="${col}" stroke-width="${w}" fill="none"/>`,
+  (c,col,w)=>`<path d="M${c*0.2} ${c*0.62}C${c*0.26} ${c*0.34} ${c*0.62} ${c*0.28} ${c*0.78} ${c*0.44}C${c*0.86} ${c*0.62} ${c*0.6} ${c*0.78} ${c*0.34} ${c*0.74}Z" stroke="${col}" stroke-width="${w}" fill="none"/>`,
+];
+const SIL={
+  chair:(c)=>`M${c*0.3} ${c*0.2}L${c*0.7} ${c*0.2}L${c*0.7} ${c*0.56}L${c*0.78} ${c*0.56}L${c*0.78} ${c*0.84}L${c*0.7} ${c*0.84}L${c*0.7} ${c*0.64}L${c*0.3} ${c*0.64}L${c*0.3} ${c*0.84}L${c*0.22} ${c*0.84}L${c*0.22} ${c*0.56}L${c*0.3} ${c*0.56}Z`,
+  bowl:(c)=>`M${c*0.16} ${c*0.44}A${c*0.34} ${c*0.34} 0 0 0 ${c*0.84} ${c*0.44}Z`,
+  branch:(c)=>`M${c*0.18} ${c*0.82}L${c*0.82} ${c*0.24}M${c*0.42} ${c*0.58}A${c*0.14} ${c*0.1} 0 0 1 ${c*0.62} ${c*0.46}M${c*0.56} ${c*0.44}A${c*0.13} ${c*0.1} 0 0 0 ${c*0.4} ${c*0.34}`,
+};
+function negSpace(sil,c,filled,id){const d=sil(c);
+  if(!filled)return `<path d="${d}" stroke="var(--guide-l)" stroke-width="1.2" fill="none"/>`;
+  return `<mask id="ns${id}"><rect width="${c}" height="${c}" fill="white"/><path d="${d}" fill="black"/></mask>`
+    +`<g mask="url(#ns${id})">`+K.hatch(c,c,{angle:45,spacing:6,width:1.6,id:'n'+id})+`</g>`
+    +`<path d="${d}" stroke="var(--ink)" stroke-width="1.4" fill="none"/>`;}
+function scene(w,h){return K.line(0,h-24,w,h-24,{c:'var(--guide)'})
+  +K.rect(w*0.12,h*0.3,w*0.16,h*0.58,{c:'var(--ink)',sw:1.4})
+  +K.ellipse(w*0.42,h*0.66,w*0.07,w*0.07,{c:'var(--ink)',w:1.4})
+  +K.rect(w*0.56,h*0.46,w*0.2,h*0.42,{c:'var(--ink)',sw:1.4})
+  +K.ellipse(w*0.86,h*0.2,w*0.05,w*0.05,{c:'var(--guide)',w:1.2});}
+function onePoint(w,h,n){const vx=w/2,vy=h*0.42;let s=K.rays(vx,vy,w,h,12);
+  for(let i=0;i<n;i++){const x=60+i*(w-200)/n,y=h*0.62,bw=110,bh=84;
+    s+=K.rect(x,y,bw,bh,{c:'var(--ink)',sw:1.6});}
+  return s+K.vp(vx,vy,'VP');}
+function corridor(w,h){const vx=w/2,vy=h*0.45;let s='';
+  for(const t of [0.1,0.3,0.7,0.9])s+=K.line(vx,vy,t*w,h,{c:'var(--guide-l)'})+K.line(vx,vy,t*w,0,{c:'var(--guide-l)'});
+  s+=K.rect(w*0.1,h*0.45,26,h*0.42,{c:'var(--ink)',sw:1.6});
+  return s+K.vp(vx,vy,'VP');}
+function twoPoint(w,h,example,{floor,mass,edges}={}){const hy=h*0.36;
+  let s=K.horizon(w,hy)+K.vp(6,hy,'VP · L')+K.vp(w-6,hy,'VP · R');
+  const mk=(x,y0,y1)=>{let g=K.line(x,y0,x,y1,{c:'var(--ink)',w:1.6});
+    for(const y of [y0,y1]){g+=K.line(6,hy,x,y,{c:'var(--guide-l)'})+K.line(w-6,hy,x,y,{c:'var(--guide-l)'});}
+    return g;};
+  if(edges){[[w*0.22,hy-150,hy-30],[w*0.42,hy-120,hy-16],[w*0.62,hy+40,hy+190],[w*0.82,hy+60,hy+230]]
+    .forEach(([x,a,b])=>{s+=mk(x,a,b);});return s;}
+  if(floor){s+=mk(w*0.42,hy+60,hy+260);return s;}
+  if(mass){s+=mk(w*0.46,hy-180,hy+240);return s;}
+  s+=mk(w*0.44,hy-140,hy+170);
+  if(example)s+=K.rect(w*0.6,hy+230,150,110,{c:'var(--ink)',sw:1.6});
+  return s;}
+function threePoint(w,h,dir){const hy=dir==='up'?h*0.72:h*0.28,ty=dir==='up'?-h*0.5:h*1.5;
+  let s=K.horizon(w,hy)+K.vp(6,hy,'VP · L')+K.vp(w-6,hy,'VP · R');
+  const x=w*0.48,y0=dir==='up'?hy-320:hy+60,y1=dir==='up'?hy-40:hy+340;
+  s+=K.line(x,y0,x,y1,{c:'var(--ink)',w:1.6});
+  for(const y of [y0,y1])s+=K.line(6,hy,x,y,{c:'var(--guide-l)'})+K.line(w-6,hy,x,y,{c:'var(--guide-l)'});
+  for(const t of [0.3,0.48,0.66])s+=K.line(t*w,dir==='up'?h:0,x,ty,{c:'var(--guide-l)'});
+  return s+`<text x="${x+16}" y="${dir==='up'?18:h-8}" fill="var(--muted)" font-size="11.5" font-family="Inter,system-ui,sans-serif" font-weight="500" letter-spacing=".9">VP · ${dir==='up'?'UP':'DOWN'}</text>`;}
+function rotBox(c,deg,filled){const r=deg*Math.PI/180,u=c*0.3,cx=c/2,cy=c*0.56;
+  const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  const dx=Math.cos(r)*u,dz=Math.sin(r)*u*0.42;
+  return `<path d="M${cx-dx} ${cy-dz}L${cx+dx} ${cy+dz}" stroke="${st}" stroke-width="${sw}"/>`
+    +K.rect(cx-u*0.7,cy-u*0.8,u*1.4,u*1.2,{c:st,sw});}
+function cylAxis(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  const a=[[c/2,c*0.2,c/2,c*0.8],[c*0.2,c/2,c*0.8,c/2],[c*0.24,c*0.76,c*0.76,c*0.24]][i];
+  let s=K.line(...a,{c:'var(--guide)',w:1});
+  if(filled){s+=K.ellipse(a[0],a[1],c*0.16,c*0.06,{c:st,w:sw})+K.ellipse(a[2],a[3],c*0.16,c*0.06,{c:st,w:sw});}
+  return s;}
+function cone(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  const cx=c/2,by=c*0.76,rx=c*0.24,ry=c*0.08,tip=[c*0.5,c*0.2][0];
+  let s=K.line(cx,c*0.18,cx,by,{c:'var(--guide)',w:1});
+  if(filled)s+=K.ellipse(cx,by,rx,ry,{c:st,w:sw})
+    +`<path d="M${cx-rx} ${by}L${cx} ${c*0.18}L${cx+rx} ${by}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  return s;}
+function contourSphere(c,i,filled){const r=c*0.32,cx=c/2,cy=c/2;
+  const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  let s=K.ellipse(cx,cy,r,r,{c:st,w:sw});
+  if(filled)for(const t of [-0.6,-0.2,0.2,0.6])s+=K.ellipse(cx,cy+r*t,r*Math.sqrt(1-t*t),r*0.22,{c:'var(--guide)',w:1});
+  return s;}
+function combined(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  if(i===0)return K.rect(c*0.14,c*0.44,c*0.4,c*0.36,{c:st,sw})
+    +K.ellipse(c*0.66,c*0.34,c*0.16,c*0.06,{c:st,w:sw})
+    +K.line(c*0.5,c*0.34,c*0.5,c*0.7,{c:st,w:sw})+K.line(c*0.82,c*0.34,c*0.82,c*0.7,{c:st,w:sw});
+  return K.ellipse(c*0.5,c*0.66,c*0.2,c*0.07,{c:st,w:sw})
+    +`<path d="M${c*0.3} ${c*0.66}L${c*0.5} ${c*0.24}L${c*0.7} ${c*0.66}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;}
+function section(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  let s=`<path d="M${c*0.18} ${c*0.72}C${c*0.3} ${c*0.2} ${c*0.7} ${c*0.28} ${c*0.82} ${c*0.68}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  if(filled)for(const t of [0.34,0.5,0.66])s+=K.ellipse(c*t+c*0.06,c*0.46,c*0.1,c*0.04,{c:'var(--guide)',w:1});
+  return s;}
+function vessel(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  if(i===0){let s=`<path d="M${c*0.38} ${c*0.22}C${c*0.1} ${c*0.36} ${c*0.1} ${c*0.74} ${c*0.5} ${c*0.8}C${c*0.9} ${c*0.74} ${c*0.9} ${c*0.36} ${c*0.62} ${c*0.22}Z" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+    if(filled)s+=K.ellipse(c*0.5,c*0.22,c*0.12,c*0.04,{c:'var(--guide)',w:1})+K.ellipse(c*0.5,c*0.52,c*0.4,c*0.1,{c:'var(--guide)',w:1});
+    return s;}
+  let s=`<path d="M${c*0.2} ${c*0.4}A${c*0.3} ${c*0.3} 0 0 0 ${c*0.8} ${c*0.4}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  if(filled)s+=K.ellipse(c*0.5,c*0.4,c*0.3,c*0.08,{c:'var(--guide)',w:1});
+  return s;}
+function objBox(c,i,filled){const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
+  const b=K.rect(c*0.2,c*0.32,c*0.6,c*0.42,{c:'var(--guide)',sw:1});
+  if(!filled)return b;
+  if(i===0)return b+K.rect(c*0.24,c*0.42,c*0.52,c*0.26,{c:st,sw});
+  if(i===1)return b+K.ellipse(c*0.5,c*0.4,c*0.14,c*0.05,{c:st,w:sw})
+    +K.line(c*0.36,c*0.4,c*0.4,c*0.68,{c:st,w:sw})+K.line(c*0.64,c*0.4,c*0.6,c*0.68,{c:st,w:sw});
+  return b+K.rect(c*0.26,c*0.38,c*0.48,c*0.3,{c:st,sw});}
+
+/* ============================================================
+   BUILD THE PAGE LIST  (§5)
+   ============================================================ */
+const drills = [
+  ...LINE.map((d) => ['l', ...d]),
+  ...INK.map((d) => ['m', ...d]),
+  ...SPACE.map((d) => ['s', ...d]),
+  ...FORM.map((d) => ['f', ...d]),
+];
+
+const pages = [];
+let folio = 0, drillNo = 0;
+const push = (p) => { pages.push({ ...p, folio: ++folio }); return pages.at(-1); };
+
+/* --- 前 --- */
+const cover = push({ id: 'x01', key: 'toc', cover: true });
+const howto = push({ id: 'x02', key: 'toc', metaL: 'HOW TO USE',
+  title: T('用法', 'How to use'),
+  instr: 'Every drill page works the same way.' });
+const toc = push({ id: 'x03', key: 'toc', metaL: 'CONTENTS', title: T('目次', 'Contents') });
+
+/* --- 52 drills --- */
+const drillPages = drills.map(([key, id, han, latin, instr, time, art]) =>
+  push({ id, key, drill: ++drillNo, han, latin, time,
+    title: T(han, latin), instr, ...art }));
+
+/* --- 五 自由 --- */
+push({ id: 'b01', key: 'b', metaL: 'FREE · BLANK', time: '15–25',
+  title: T('白紙', 'Blank'),
+  instr: 'No guides. Draw the corner of the room you are sitting in.',
+  layout: 'B', bare: true, field: (w, h) => K.corners(w, h) });
+push({ id: 'b02', key: 'b', metaL: 'FREE · DOT GRID', time: '15–25',
+  title: T('點格', 'Dot grid'), instr: 'A 24 px grid. Use it for anything.',
+  layout: 'B', bare: true, field: (w, h) => K.dotGrid(w, h, 24) });
+push({ id: 'b03', key: 'b', metaL: 'FREE · FRAMES', time: '15–25',
+  title: T('框', 'Frames'), instr: 'Six empty 3:4 frames. Thumbnail freely.',
+  layout: 'B', bare: true, field: (w, h) => K.frames(w, 3, 2, { gap: 30 }).svg });
+
+/* --- 記錄 --- */
+const log = push({ id: 'r01', key: 'r', metaL: 'RECORD · DRILL LOG',
+  title: T('記錄', 'Drill log'), instr: 'Tap a number to jump to that drill.' });
+const ba = push({ id: 'r02', key: 'r', metaL: 'RECORD · BEFORE / AFTER',
+  title: T('前後', 'Before / After'),
+  instr: 'Redo DRILL 06 and DRILL 36 after finishing all 52.' });
+
+/* ============================================================
+   ONE-OFF PAGE BODIES
+   ============================================================ */
+function coverHtml() {
+  return `<div class="page" id="${aid('x01')}" style="--pad:0">
+<div style="position:absolute;inset:84px;border:1px solid var(--hair)"></div>
+<div style="position:absolute;left:140px;top:158px;font-size:12.5px;font-weight:500;
+  letter-spacing:.18em;color:var(--muted);font-family:var(--meta)">JUDE</div>
+<div style="position:absolute;right:140px;top:128px;font-family:var(--han);font-size:58px;
+  line-height:1.28;color:var(--ink);text-align:center">練<br>習</div>
+<div style="position:absolute;left:140px;top:610px;font-family:var(--display);font-weight:300;
+  font-size:132px;line-height:1;letter-spacing:.02em;color:var(--ink)">INAE</div>
+<div style="position:absolute;left:146px;top:768px;font-family:var(--display);font-weight:300;
+  font-size:40px;letter-spacing:.14em;color:var(--muted)">PRACTICE</div>
+<div style="position:absolute;left:148px;top:842px;font-family:var(--han);font-size:22px;
+  color:var(--muted)">이내 · 연습</div>
+<div style="position:absolute;left:140px;top:1010px;width:800px;height:1px;background:var(--hair)"></div>
+<div style="position:absolute;left:140px;top:1028px;font-family:var(--display);font-size:26px;
+  font-weight:300;color:var(--ink)">The fundamentals of line and space.</div>
+<div style="position:absolute;left:140px;top:1080px;font-family:var(--han);font-size:17px;
+  color:var(--muted)">매일 20분, 선과 여백의 기초</div>
+<div style="position:absolute;left:140px;top:1282px;font-size:12px;font-weight:500;
+  letter-spacing:.08em;color:var(--muted);font-family:var(--meta)">60 PAGES · 52 DRILLS · UNDATED</div>
+<div style="position:absolute;right:140px;top:1282px;font-size:12px;font-weight:500;
+  letter-spacing:.08em;color:var(--muted);font-family:var(--meta)">GOODNOTES · NOTABILITY</div>
+</div>`;
+}
+
+function howtoHtml() {
+  const step = (y, n, t, d) =>
+    `<div class="lab" style="left:0;top:${y}px">${n}</div>`
+    + `<div style="position:absolute;left:0;top:${y + 24}px;font-family:var(--display);`
+    + `font-size:23px;font-weight:300;color:var(--ink)">${t}</div>`
+    + `<div style="position:absolute;left:0;top:${y + 60}px;width:430px;font-size:14px;`
+    + `font-weight:500;color:var(--muted);line-height:1.7">${d}</div>`;
+  const demo = K.svg(390, 190,
+    K.rect(0, 30, 150, 150, { c: 'var(--hair)' })
+    + K.valueBox(150, 150, 0.5, 'howto').replace('<clipPath', '<clipPath')
+    + K.line(196, 105, 236, 105, { c: 'var(--guide)' })
+    + `<path d="M229 101L236 105L229 109" stroke="var(--guide)" stroke-width="1" fill="none"/>`
+    + K.rect(240, 30, 150, 150, { c: 'var(--hair)' }));
+  return step(0, 'ONE', 'EXAMPLE on the left.',
+      'The left cell is already drawn. Read the density, the angle, the weight &mdash; that is the target.')
+    + step(200, 'TWO', 'YOURS on the right.',
+      'Match it in the empty cell. One pen, one opacity. A firm brush at 100% opacity keeps the value honest.')
+    + step(400, 'THREE', 'Repeat as often as you like.',
+      'Duplicate any page to repeat a drill. Nothing in this book is dated, so it never expires.')
+    + `<div style="position:absolute;left:500px;top:24px">`
+    + `<div class="lab" style="left:0;top:0">EXAMPLE</div>`
+    + `<div class="lab" style="left:240px;top:0">YOURS</div>${demo}</div>`
+    + `<div style="position:absolute;left:0;top:640px;width:912px;height:1px;background:var(--hair)"></div>`
+    + `<div style="position:absolute;left:0;top:668px;font-family:var(--han);font-size:17px;color:var(--ink)">五部 · 五十二 練習</div>`
+    + `<div style="position:absolute;left:0;top:706px;width:912px;font-size:14px;font-weight:500;color:var(--muted);line-height:1.8">`
+    + SECTIONS.slice(1, 6).map((s) => `${s.tab} ${s.label}`).join(' &nbsp;·&nbsp; ')
+    + `<br>Tap any tab along the top edge to jump between them. The contents page lists every drill.</div>`;
+}
+
+function tocHtml() {
+  const rows = [];
+  for (const s of SECTIONS.slice(1)) {
+    const list = pages.filter((p) => p.key === s.key && p.title);
+    rows.push({ head: true, text: `${s.mark}` });
+    for (const p of list)
+      rows.push({ id: p.id, no: p.drill ? String(p.drill).padStart(2, '0') : '—',
+        text: `${p.han || ''} ${p.latin || p.title.replace(/<[^>]+>/g, ' ').trim()}`, folio: p.folio });
+  }
+  let html = '', x = 0, y = 0;
+  for (const r of rows) {
+    if (y > H - 26) { x = 470; y = 0; }
+    if (r.head) {
+      if (y) y += 16;
+      html += `<div class="tocsec" style="left:${x}px;top:${y}px">${r.text}</div>`;
+      y += 34;
+    } else {
+      html += `<a class="tocrow" href="#${aid(r.id)}" style="left:${x}px;top:${y}px">`
+        + `<span class="n">${r.no}</span>&nbsp;&nbsp;<span class="t">${r.text}</span>`
+        + `<span class="n">&nbsp;&nbsp;&middot;&nbsp;${r.folio}</span></a>`;
+      y += 26;
+    }
+  }
+  return html;
+}
+
+function logHtml() {
+  let html = '';
+  const cols = 4, cw = 228, rowH = 34;
+  drillPages.forEach((p, i) => {
+    const c = Math.floor(i / 13), r = i % 13;
+    const x = c * cw, y = r * rowH;
+    html += `<a class="logrow" href="#${aid(p.id)}" style="left:${x}px;top:${y}px">`
+      + `<span style="display:inline-block;width:19px;height:19px;border:1px solid var(--hair);`
+      + `vertical-align:-4px;margin-right:11px"></span>`
+      + `<span style="color:var(--guide)">${String(p.drill).padStart(2, '0')}</span>`
+      + `&nbsp;&nbsp;<span style="color:var(--ink)">${p.han}</span></a>`;
+  });
+  html += `<div style="position:absolute;left:0;top:${13 * rowH + 40}px;width:912px;height:1px;background:var(--hair)"></div>`;
+  html += `<div style="position:absolute;left:0;top:${13 * rowH + 66}px;font-size:14px;font-weight:500;color:var(--muted)">`
+    + `Tick a box when a drill feels steady &mdash; not when you finish it once.</div>`;
+  return html;
+}
+
+function baHtml() {
+  const pair = (y, label, a, b) =>
+    `<div class="lab" style="left:0;top:${y}px">${label}</div>`
+    + `<div class="lab" style="left:466px;top:${y}px">AFTER</div>`
+    + K.svg(912, 360, K.rect(0, 22, 440, 330, { c: 'var(--hair)' })
+      + K.rect(466, 22, 440, 330, { c: 'var(--hair)' }))
+      .replace('<svg', `<svg style="position:absolute;left:0;top:${y}px"`);
+  return pair(0, 'BEFORE · DRILL 06', 0, 0) + pair(480, 'BEFORE · DRILL 36', 0, 0);
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const bodyFor = (p) => {
+  if (p.id === 'x02') return howtoHtml();
+  if (p.id === 'x03') return tocHtml();
+  if (p.id === 'r01') return logHtml();
+  if (p.id === 'r02') return baHtml();
+  if (p.layout === 'A') return layoutA(p);
+  if (p.layout === 'B') return layoutB(p);
+  return '';
+};
+
+const html = pages.map((p) => p.cover ? coverHtml() : page(p, bodyFor(p))).join('\n');
+
+const printCss = `
+html,body{margin:0;padding:0;background:var(--paper);}
+body{display:block;}
+.page{margin:0 auto;break-after:page;page-break-after:always;}
+.page:last-of-type{break-after:auto;}
+@page{size:1080px 1440px;margin:0;}
+@media print{html,body{background:#fff;}}
+`;
+
+const out = join(root, 'export/inae');
+mkdirSync(out, { recursive: true });
+writeFileSync(join(out, 'inae-practice.html'), `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INAE Practice — the fundamentals of line and space</title>
+<style>${[tokens, base, texture, printCss].filter(Boolean).join('\n')}</style>
+</head><body>
+${html}
+</body></html>
+`);
+
+/* ---- report ---- */
+const tabLinks  = (html.match(/<a class="tab/g) || []).length;
+const tocLinks  = (tocHtml().match(/href="#/g) || []).length;
+const logLinks  = (logHtml().match(/href="#/g) || []).length;
+const links     = (html.match(/href="#/g) || []).length;
+console.log(`Built ${pages.length} pages \u00b7 ${drillNo} drills \u2192 export/inae/inae-practice.html`);
+console.log(`Links ${links} = tabs ${tabLinks} (7 \u00d7 ${pages.length - 1} \u2014 the cover carries no nav, per Figma 881:1724)`);
+console.log(`            + contents ${tocLinks} (52 drills + 3 free + 2 record)`);
+console.log(`            + drill log ${logLinks}`);
+if (!texture) console.log('\u26a0  assets/inae/hanji-1080x1440.png missing \u2014 flat paper. Run: node tools/inae-texture.mjs');

@@ -137,9 +137,21 @@ const jobs = [
     { src: join(root, 'export', t, 'goyo-print.html'), out: join(root, 'export', t, `goyo-${t}.pdf`), label: `${t} planner` },
     { src: join(root, 'export', t, 'goyo-guide.html'), out: join(root, 'export', t, `goyo-guide-${t}.pdf`), label: `${t} guide` },
   ]),
+  // INAE Practice is a separate product LINE (not a GOYO theme), so it gets
+  // one job of its own rather than joining the per-theme fan-out above.
+  { src: join(root, 'export', 'inae', 'inae-practice.html'), out: join(root, 'export', 'inae', 'inae-practice.pdf'), label: 'inae practice' },
   // The sticker guide is a single 'goyo' theme (not per-colourway).
   { src: join(root, 'export', 'goyo', 'goyo-sticker-guide.html'), out: join(root, 'export', 'goyo', 'goyo-sticker-guide.pdf'), label: 'goyo sticker guide' },
 ];
+
+/* optional CLI filter: `node tools/pdf.mjs inae` renders only matching labels.
+   Handy while iterating on one product — the full fan-out is 405 pages × 3. */
+const only = process.argv[2];
+const selected = only ? jobs.filter((j) => j.label.includes(only)) : jobs;
+if (only && !selected.length) {
+  console.log(`No render target matches "${only}". Labels: ${jobs.map((j) => j.label).join(', ')}`);
+  process.exit(1);
+}
 
 const userDataDir = mkdtempSync(join(tmpdir(), 'goyo-pdf-'));
 const port = 9333 + Math.floor(Math.random() * 500);
@@ -152,7 +164,7 @@ let ok = 0;
 try {
   await waitForDevTools(port);
   console.log(`Using ${chrome} (CDP on :${port})`);
-  for (const { src, out, label } of jobs) {
+  for (const { src, out, label } of selected) {
     if (!existsSync(src)) { console.log(`  skip ${label} (run npm run export / npm run guide first)`); continue; }
     try {
       const pdf = await printToPdf(port, pathToFileURL(src).href);

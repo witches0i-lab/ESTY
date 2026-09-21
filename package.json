@@ -9,9 +9,8 @@
     "export": "node tools/planner.mjs",
     "guide": "node tools/guide.mjs",
     "sticker-guide": "node tools/sticker-guide.mjs",
+    "drawingbook": "node tools/drawingbook.mjs",
     "pdf": "node tools/pdf.mjs",
-    "build": "node tools/planner.mjs && node tools/guide.mjs && node tools/sticker-guide.mjs && node tools/pdf.mjs",
-    "inae:export": "node inae/tools/build.mjs",
-    "inae:build": "node inae/tools/build.mjs"
+    "build": "node tools/planner.mjs && node tools/guide.mjs && node tools/sticker-guide.mjs && node tools/drawingbook.mjs && node tools/pdf.mjs"
   }
 }

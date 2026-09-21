@@ -110,48 +110,40 @@ pinned to 29 so the same file works in leap years) — this constant is duplicat
 - The COMMON "7 journal base pages" rule does NOT apply here; keep this product namespaced from the journal.
 - Status: build COMPLETE (2026-07). Maintenance/edits only.
 
-## ── INAE (이내) — 신규 라인 (GOYO와 별개) ──
+## ── INAE (이내) — 별개 제품 라인 ──
 - **제품 라인이지 GOYO 테마가 아니다.** 착수 결정 2026-09-21 (Jude), Notion 마스터 허브
-  「🆕 신규 착수 상태」에 기록. GOYO의 컬러웨이(najeon/light/hanji)와 같은 층위가 아니라
-  GOYO와 나란히 서는 별개 라인.
-- **격리 계약 — 공유 파일 0개.** 토큰·레이아웃·페이지 마크업·표지 아트·guide-kit 전부 분리.
-  공통은 *포맷* 제약(1080×1440, print reset, `#anchor` 하이퍼링크)뿐이고 그건 커플링이 아니다.
-
-  | | GOYO | INAE |
-  |---|---|---|
-  | 디자인 소스 오브 트루스 | `index.html` | `inae/index.html` |
-  | 토큰 | `css/tokens.css` | `inae/css/tokens.css` |
-  | 레이아웃 | `css/base.css` | `inae/css/base.css` |
-  | 생성기 | `tools/planner.mjs` | `inae/tools/build.mjs` |
-  | 산출물 | `export/<theme>/goyo-*.html` | `export/inae/inae-*.html` |
-  | 앵커 프리픽스 | `p-*` | `i-*` |
-
-  → **한쪽 변경이 다른 쪽을 건드리게 만들지 말 것.** 라인 경계를 넘어 import하고 싶어지면
-  옆으로 손 뻗지 말고 라인 중립 모듈로 따로 빼낸다.
-- 빌드: `npm run inae:export` → `export/inae/inae-print.html`. GOYO의 `npm run build`에는
-  **일부러 넣지 않았다** (라인 격리). 프리뷰는 `npm run dev` 후 `/inae/`.
-- **COMMON의 다음 규칙은 INAE에 적용되지 않는다:** 「7개 저널 base 페이지」,
-  「undated 불변식(MLEN 366일 고정)」, 「index.html ↔ planner.mjs 수동 미러링」,
-  「`themes/` 컬러웨이 등록 체크리스트」. 전부 GOYO 라인의 규칙이다.
-- **COMMON에서 그대로 유효한 것:** 레포 범위(코드 트랙 전용), 스택(no framework/bundler/npm deps,
-  Node 빌트인만), 라인 네임스페이싱, 「측정하고 바꿔라 · 기억으로 좌표 추측 금지」,
-  색 바꿀 때 CSS와 HTML 같이 고치기.
-- **안티드리프트:** GOYO 최악의 함정(마크업 두 벌 = `index.html`과 `planner.mjs`)을
-  **INAE에서 재현하지 말 것.** `inae/tools/build.mjs`는 마크업을 `inae/index.html`에서
-  슬라이스해 온다. 데이터 루프가 필요해져도 *마크업*은 계속 index.html에서 읽어라.
-- **Etsy 어휘는 `journal`이 아니라 `planner`.** Notion Marketplace Insights 12건 전수에서
-  planner 계열=High~Very high 전환 / journal 계열=Low~Typical, 예외 없음. GOYO는 journal로
-  이미 발행해 되돌리는 비용을 치르는 중이고 INAE는 백지라 처음부터 맞게 간다 —
-  제품명·파일명·SKU·페이지 타이틀·리스팅 카피 전부.
-- **아직 미정 (실제 페이지 작업을 막는 항목):** 제품 형태(GOYO식 405p 언데이티드 영속형인지
-  다른 페이지 구성인지) · 페이지 세트 · 모티프/팔레트/타입 · 컬러웨이 수.
-  현재 유일한 디자인 입력은 Framer 랜딩 티저 **색·달·구름·별**뿐이고 Figma
-  `Ds1jpwqKkL1nkWpTXsJczw`에 INAE 페이지는 **없다**.
-- **현재 상태: 스캐폴드만 존재.** `inae/css/tokens.css` 값은 전부 **임시 플레이스홀더**이고
-  `inae/index.html`은 파이프라인 동작 확인용 Cover 1장뿐. 세부는 `inae/README.md`.
-- PDF 단계는 **아직 없다** — `tools/pdf.mjs`(172줄 CDP 드라이버)를 플레이스홀더 때문에
-  복사하면 이후 버그를 두 번 고치게 된다. 페이지 세트 확정되면 그때 **CDP 드라이버를
-  라인 중립 모듈로 추출해 양쪽이 호출**하게 할 것. 그때까지는 수동 인쇄.
+  「🆕 신규 착수 상태」에 기록. GOYO 컬러웨이(najeon/light/hanji)와 같은 층위가 아니다.
+- **첫 제품: INAE Practice — 디지털 드로잉 연습북.** 60p · 드릴 52장 · iPad
+  (GoodNotes/Notability) 하이퍼링크 PDF · $7–9. 손그림 없이 전 페이지 벡터/코드 생성.
+- **스펙 원본 = `docs/drawingbook-spec.md` (v0.2).** 페이지 맵·그리드·토큰·타이포·지시 문법이
+  전부 거기 있다. **INAE 작업 전 반드시 먼저 읽을 것.** 이 블록은 그 요약이 아니라 배선 메모다.
+- **구조 선례는 스티커 가이드 패턴이다** — `index.html`(저널 7페이지 소스) 아님. 파일 트리와
+  상속·미상속 항목은 스펙 §2가 원본:
+  `tools/drawingbook.mjs` · `tools/drawingbook-kit.mjs` · `css/drawingbook.css` ·
+  `themes/inae.css` · `assets/inae/` · `export/inae/inae-practice.{html,pdf}`
+- ⚠️ **`themes/inae.css`는 GOYO 컬러웨이가 아니다.** 아래 「Adding a new theme later」
+  체크리스트의 `themes/<name>.css`와 파일명 규칙만 같을 뿐이고, `tools/planner.mjs` ·
+  `tools/guide.mjs` · `tools/pdf.mjs`의 `themes` 배열에 **절대 등록하지 말 것.**
+  등록하면 GOYO 3종 빌드에 INAE 토큰이 샌다.
+- **서체를 GOYO와 공유하지 않는다:** Newsreader Light / Noto Serif KR / Inter Medium
+  (스펙 §3.1, Figma `INAE journal` 770:11917 파운데이션과 일치). GOYO 서체(Bodoni Moda)를
+  쓰면 같은 샵 썸네일에서 INAE가 GOYO 변형으로 읽힌다. 산출물에 Cormorant Garamond ·
+  Courier Prime이 남아 있으면 v0.1 잔재다 (스펙 §7).
+- **앵커:** 푸터 표기 `p-{id} · {folio}` (스펙 §3.3, Figma 푸터에 이미 반영됨).
+  ⚠️ GOYO도 `p-` 프리픽스를 쓴다 — `p-m01`은 GOYO에선 1월 월간, INAE에선 墨 드릴1이다.
+  산출물이 별개 PDF라 실동작 충돌은 없지만, 레포에서 `p-m01`을 볼 때 어느 제품인지 먼저 볼 것.
+- **COMMON 중 적용 안 되는 것:** 「7개 저널 base 페이지」 · 366일 루프 / `MLEN` / `rail()` ·
+  `index.html`↔`planner.mjs` 마크업 이중화 · `themes/` 컬러웨이 등록 체크리스트.
+  **적용되는 것:** undated 불변식(연도·요일·날짜 미인쇄) · 코드 트랙 전용 ·
+  no framework/bundler/npm deps · 라인 네임스페이싱 · 측정 후 변경.
+- **Figma:** 같은 파일 `Ds1jpwqKkL1nkWpTXsJczw`의 **`INAE drawing` 페이지 (859:1724)**.
+  ⚠️ `get_metadata`를 nodeId 없이 호출하면 상위 페이지 목록에 이 페이지가 **안 나온다** —
+  반드시 노드 ID로 직접 호출할 것. 기존 프레임: `881:1724` x01 표지 · `878:17049` f04 투시 ·
+  `878:17110` m01 해칭 · `878:17402` b01 백지. 반영 절차는 스펙 §6.
+- **빌드:** `npm run drawingbook` 추가 + `npm run build` 체인 편입 (스펙 §2).
+  PDF는 `tools/pdf.mjs`를 재사용한다 (새로 복사하지 말 것 — CDP 드라이버는 라인 중립 인프라).
+- **QA:** 스펙 §7 체크리스트 + `docs/link-test.md`에 링크 카운트 기록.
+- **상태: 스펙 확정, 구현 미착수.** 미결 항목은 스펙 §8.
 
 ## ── Adding a new theme later ──
 - Duplicate the GOYO theme-specific section, rename, and fill in that theme's specifics.
