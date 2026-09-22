@@ -118,6 +118,20 @@ console.log([...new Set((d.match(/\/BaseFont\s*\/([A-Za-z0-9+-]+)/g)||[]).map(x=
 5. Confirm the **cover** has no tap targets.
 6. Draw on a drill, follow a link, come back — ink persists.
 
+## Cell centring (layout A)
+`npm run inae-audit` renders the book and measures, in pixels, where the ink
+actually lands inside all 188 drill cells. It reports anything off-centre by
+more than 5px, or art crowding the cell frame that was not meant to fill it.
+
+Pixels, not SVG geometry: `getBBox()` reports geometry *before* clipping, so a
+hatch drawn long and clipped to its box measures as if it escaped the cell, and
+masked shading measures as the whole cell. The rendered page is the only honest
+source. Two pages are off-centre on purpose and are declared in the tool:
+`s07` (balancing the given mass IS the drill) and `f13`'s YOURS axis (placed
+where the cone's axis is, so a cone drawn on it lands centred).
+
+- [ ] `npm run inae-audit` exits clean.
+
 ## Visual / print
 - [ ] Every page exactly **1080×1440**, no margins, no workspace chrome.
 - [ ] Paper texture present on all 60 pages (one shared raster, embedded once).

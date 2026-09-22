@@ -156,6 +156,12 @@ pinned to 29 so the same file works in leap years) — this constant is duplicat
   전면 RGB 래스터 1장을 문서에 1회만 임베드해 60페이지가 공유. **blend mode로 바꾸지 말 것**
   — 중첩 투명 그룹은 일부 PDF 뷰어가 검게 합성한다(GOYO pine 레이어와 같은 함정).
 - **PDF:** `node tools/pdf.mjs inae` 로 이 타깃만 렌더 가능(라벨 필터). 전체는 405p × 3이라 느리다.
+- **칸 정렬은 눈이 아니라 `npm run inae-audit`으로 본다.** 188개 드릴 칸의 잉크 위치를
+  픽셀로 재서 5px 넘게 벗어난 것을 잡는다. ⚠️ SVG `getBBox()`는 **클립 이전** 기하를 주므로
+  길게 그어 클립한 해칭이 칸을 탈출한 것처럼 나온다 — 반드시 렌더된 픽셀로 잴 것.
+  의도적 비대칭 2건(`s07` 균형, `f13`의 YOURS 축)은 도구에 선언돼 있다.
+  형태 프리미티브는 **자기 bbox로 스스로 중앙정렬**한다(`boxPoints`·`coneAxis{fit}`·
+  `section`·`scribble`) — 손으로 맞춘 상수를 새로 넣지 말 것.
 - **QA:** 스펙 §7 체크리스트 + `docs/link-test.md` 하단 INAE 섹션.
   현재 기준값: **60페이지 · 링크 522개**(탭 413 + 目次 57 + 드릴로그 52) · 폴백 서체 0건.
 - **상태: 1차 빌드 완료 (2026-09-21).** 60p·52드릴 생성, 서체 임베드, 링크 검증 통과.

@@ -211,24 +211,31 @@ export function frames(w, cols, rows, { gap = 28, thirds = false } = {}) {
 
 const K_TILT = 0.45;   // vertical foreshortening of the ground plane
 
-/** A box rotated `deg` about its vertical axis. Returns the 8 projected pts. */
-export function boxPoints(c, deg, { w = 0.46, d = 0.30, h = 0.42, cy = 0.62 } = {}) {
+/** A box rotated `deg` about its vertical axis, centred in the cell.
+    `refH` centres against a different height than the box's own — objBox uses
+    it so a cage and the form inside it share one base plane instead of each
+    floating at its own centre. */
+export function boxPoints(c, deg, { w = 0.46, d = 0.30, h = 0.42, refH } = {}) {
   const th = (deg * Math.PI) / 180;
-  const W = c * w, D = c * d, Hh = c * h, ox = c / 2, oy = c * cy;
+  const W = c * w, D = c * d, Hh = c * h, RH = c * (refH ?? h);
   const plan = [[-W / 2, -D / 2], [W / 2, -D / 2], [W / 2, D / 2], [-W / 2, D / 2]];
-  const base = plan.map(([x, z]) => {
-    const X = x * Math.cos(th) - z * Math.sin(th);
-    const Z = x * Math.sin(th) + z * Math.cos(th);
-    return [ox + X, oy + Z * K_TILT];
-  });
+  const flat = plan.map(([x, z]) => [
+    x * Math.cos(th) - z * Math.sin(th),
+    (x * Math.sin(th) + z * Math.cos(th)) * K_TILT,
+  ]);
+  const xs = flat.map(([x]) => x), ys = flat.map(([, y]) => y);
+  // centre the reference solid: x by its own span, y across top-of-top to base
+  const ox = c / 2 - (Math.min(...xs) + Math.max(...xs)) / 2;
+  const oy = c / 2 - ((Math.min(...ys) - RH) + Math.max(...ys)) / 2;
+  const base = flat.map(([x, y]) => [ox + x, oy + y]);
   return { base, top: base.map(([x, y]) => [x, y - Hh]) };
 }
 
 /** Draw that box as a SOLID: hidden edges are omitted, so a shaded face reads
     as a surface rather than as hatching seen through a glass box.
     `faces` fills [top, left side, right side] with hatch densities. */
-export function isoBox(c, deg, { filled = true, faces, id = 'b', h, cage = false } = {}) {
-  const { base, top } = boxPoints(c, deg, h ? { h } : {});
+export function isoBox(c, deg, { filled = true, faces, id = 'b', h, refH, cage = false } = {}) {
+  const { base, top } = boxPoints(c, deg, { ...(h ? { h } : {}), ...(refH ? { refH } : {}) });
   const st = filled ? 'var(--ink)' : 'var(--guide-l)', sw = filled ? 1.6 : 1.2;
   const P = (pts) => 'M' + pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L') + 'Z';
 
@@ -276,6 +283,12 @@ export function isoBox(c, deg, { filled = true, faces, id = 'b', h, cage = false
 }
 
 /** A cylinder lying along the axis A→B. `e` is end-cap foreshortening. */
+export function capOverhang(x1, y1, x2, y2, r, e = 0.34) {
+  const rad = Math.atan2(y2 - y1, x2 - x1);
+  return { x: Math.hypot(r * e * Math.cos(rad), r * Math.sin(rad)),
+           y: Math.hypot(r * e * Math.sin(rad), r * Math.cos(rad)) };
+}
+
 export function cylinderAxis(x1, y1, x2, y2, r, { e = 0.34, filled = true, id = 'c', shade } = {}) {
   const ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
   const rad = (ang * Math.PI) / 180;
@@ -302,10 +315,20 @@ export function cylinderAxis(x1, y1, x2, y2, r, { e = 0.34, filled = true, id = 
 }
 
 /** A cone: base ellipse at A, tip at B, with the axis showing. */
-export function coneAxis(x1, y1, x2, y2, r, { e = 0.34, filled = true } = {}) {
+export function coneAxis(x1, y1, x2, y2, r, { e = 0.34, filled = true, fit } = {}) {
   const ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
   const rad = (ang * Math.PI) / 180;
   const nx = -Math.sin(rad) * r, ny = Math.cos(rad) * r;
+  if (fit) {
+    // axis-aligned half-extents of the rotated base ellipse (rx along the axis)
+    const hx = Math.hypot(r * e * Math.cos(rad), r * Math.sin(rad));
+    const hy = Math.hypot(r * e * Math.sin(rad), r * Math.cos(rad));
+    const bx = [Math.min(x2, x1 - hx), Math.max(x2, x1 + hx)];
+    const by = [Math.min(y2, y1 - hy), Math.max(y2, y1 + hy)];
+    const dx = fit / 2 - (bx[0] + bx[1]) / 2, dy = fit / 2 - (by[0] + by[1]) / 2;
+    return `<g transform="translate(${dx.toFixed(1)} ${dy.toFixed(1)})">`
+      + coneAxis(x1, y1, x2, y2, r, { e, filled }) + `</g>`;
+  }
   const st = filled ? 'var(--ink)' : 'var(--guide-l)', sw = filled ? 1.6 : 1.2;
   return line(x1, y1, x2, y2, { c: 'var(--guide)', w: 1, dash: '4 5' })
     + `<ellipse cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" rx="${(r * e).toFixed(1)}" `

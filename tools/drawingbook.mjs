@@ -108,6 +108,10 @@ const T = (han, latin) =>
 const A_COMP = { cell: 180, ex: 122, yo: 480, top: 30 };
 const A_GAP = 54, A_LABELW = 100, A_ARROW = 72;
 const overflows = [];   // drills whose rows do not fit the body box
+/* INAE_AUDIT=<path> writes every layout-A cell's page rect so tools outside the
+   build can measure what actually got drawn. Off by default. */
+const cellTable = process.env.INAE_AUDIT ? [] : null;
+const BODY_X = 84, BODY_Y = 356;
 
 function rowsGeom(n, cell) {
   /* Shrink to fit when a drill has many rows — f10 turns a box in seven 15°
@@ -117,14 +121,17 @@ function rowsGeom(n, cell) {
   const c = cell || Math.min(A_COMP.cell, fit);
   const pitch = c + A_GAP;
   const block = n * c + (n - 1) * A_GAP;
+  /* Snap to whole pixels. A row that lands on a half pixel renders every 1px
+     hairline in the cell as a 2px blur, which is the difference between a
+     drawn guide and a smudge at 1080×1440. */
+  const centred = Math.round(Math.max(0, (H - block) / 2));
   if (c <= A_COMP.cell) {
     return { cell: c, pitch, block, ex: A_COMP.ex, yo: A_COMP.yo,
-             top: (n >= 4 && c === A_COMP.cell) ? A_COMP.top : Math.max(0, (H - block) / 2) };
+             top: (n >= 4 && c === A_COMP.cell) ? A_COMP.top : centred };
   }
   const pairW = 2 * c + A_ARROW;
-  const ex = A_LABELW + Math.max(0, (W - A_LABELW - pairW) / 2);
-  return { cell: c, pitch, block, top: Math.max(0, (H - block) / 2),
-           ex, yo: ex + c + A_ARROW };
+  const ex = A_LABELW + Math.round(Math.max(0, (W - A_LABELW - pairW) / 2));
+  return { cell: c, pitch, block, top: centred, ex, yo: ex + c + A_ARROW };
 }
 
 function layoutA(p) {
@@ -134,6 +141,9 @@ function layoutA(p) {
         + `<div class="lab" style="left:${g.yo}px;top:${g.top - 18}px">YOURS</div>`;
   for (let i = 0; i < n; i++) {
     const y = g.top + i * g.pitch, c = g.cell;
+    if (cellTable) cellTable.push(
+      { at: `${p.id}:${i}:E`, x: BODY_X + g.ex, y: BODY_Y + y, c },
+      { at: `${p.id}:${i}:Y`, x: BODY_X + g.yo, y: BODY_Y + y, c });
     if (p.rowLabels?.[i])
       html += `<div class="rowlab" style="top:${y + c / 2 - 14}px">${p.rowLabels[i]}</div>`;
     svg += `<g transform="translate(${g.ex} ${y})">${p.example ? p.example(i, c, g) : ''}</g>`;
@@ -303,6 +313,8 @@ const SPACE = [
   ['s06','裁斷','Crop','Redraw each crop from the scene above.','20', {
     layout:'B', band:(w,h)=>scene(w,h),
     field:(w,h)=>K.frames(w,4,1,{gap:26}).svg }],
+  /* the given mass is deliberately off-centre — balancing it is the drill, so
+     this page is expected to fail a centring audit */
   ['s07','均衡','Balance','Add one shape to balance the frame.','10–15', {
     layout:'A', rows:4,
     example:(i,c)=>K.ellipse(c*0.28,c*0.6,c*0.16,c*0.16,{fill:'var(--ink)',c:'none',w:0}),
@@ -392,9 +404,14 @@ function boxGrid(w,h,cols,rows,size,{guide}={}){let s='';
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=gx+c*(size+gx),y=gy+r*(size+gy);
     s+=K.rect(x,y,size,size,{c:guide?'var(--guide-l)':'var(--hair)'});}
   return s;}
-function scribble(w,h,steps,seed){const r=K.rng(seed);let d=`M${w/2} ${h/2}`,x=w/2,y=h/2;
+function scribble(w,h,steps,seed){
+  const r=K.rng(seed);const pts=[[w/2,h/2]];let x=w/2,y=h/2;
   for(let i=0;i<steps;i++){x+=(r()-0.5)*26;y+=(r()-0.5)*26;
-    x=Math.max(6,Math.min(w-6,x));y=Math.max(6,Math.min(h-6,y));d+=`L${x.toFixed(1)} ${y.toFixed(1)}`;}
+    x=Math.max(6,Math.min(w-6,x));y=Math.max(6,Math.min(h-6,y));pts.push([x,y]);}
+  // a random walk lands wherever the seed takes it — centre it on its own bounds
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  const dx=w/2-(Math.min(...xs)+Math.max(...xs))/2,dy=h/2-(Math.min(...ys)+Math.max(...ys))/2;
+  const d=pts.map(([px,py],i)=>(i?'L':'M')+(px+dx).toFixed(1)+' '+(py+dy).toFixed(1)).join('');
   return `<path d="${d}" stroke="var(--ink)" stroke-width="1" fill="none"/>`;}
 function stepBar(w,h,n,filled){const bw=w/n,y=(h-140)/2;let s='';
   for(let i=0;i<n;i++){s+=K.rect(i*bw,y,bw,140,{c:'var(--hair)'});
@@ -414,29 +431,33 @@ const castShadow = (cx,cy,rx,ry,id)=>
   + K.hatch(cx+rx+2, cy+ry+2, {angle:0, spacing:4, width:1.3, id:'csh'+id})
   + `</g>`;
 
-const LIGHT = (c) => K.line(c*0.08,c*0.08,c*0.22,c*0.22,{c:'var(--guide)',w:1})
-  + `<path d="M${(c*0.16).toFixed(1)} ${(c*0.22).toFixed(1)}L${(c*0.22).toFixed(1)} ${(c*0.22).toFixed(1)}L${(c*0.22).toFixed(1)} ${(c*0.16).toFixed(1)}" stroke="var(--guide)" stroke-width="1" fill="none"/>`;
+/* the arrow is placed to balance the cast shadow diagonally opposite it, so the
+   cell reads centred even though neither mark is on the centre line */
+const LIGHT = (c) => K.line(c*0.21,c*0.21,c*0.35,c*0.35,{c:'var(--guide)',w:1})
+  + `<path d="M${(c*0.29).toFixed(1)} ${(c*0.35).toFixed(1)}L${(c*0.35).toFixed(1)} ${(c*0.35).toFixed(1)}L${(c*0.35).toFixed(1)} ${(c*0.29).toFixed(1)}" stroke="var(--guide)" stroke-width="1" fill="none"/>`;
 
 function sphere(c,stage,id){
-  const r=c*0.28, cx=c*0.48, cy=c*0.44;
+  /* The ground sits in EVERY stage, not just the last: the four cells are one
+     drawing progressing, so they must occupy the same footprint or the reader
+     sees the subject jump between steps. Spans are symmetric about the centre. */
+  /* the cast shadow appears only in the final stage, so centre on half of it:
+     every stage then sits within a couple of pixels of the cell centre */
+  const r=c*0.26, sh=r*0.22, span=2*r+sh/2, t=(c-span)/2;
+  const cx=c/2, cy=t+r, gy=t+2*r;
   const outline=K.ellipse(cx,cy,r,r,{c:stage==null?'var(--guide-l)':'var(--ink)',w:stage==null?1.2:1.6});
-  if(stage==null) return outline+LIGHT(c);
-  let s=LIGHT(c);
-  if(stage>=1){   // terminator: the sphere minus a light-side disc
-    s+=`<mask id="sm${id}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="white"/>`
+  let s=K.line(0,gy,c,gy,{c:'var(--guide)',w:1})+LIGHT(c);
+  if(stage>=1){
+    s+=`<mask id="sm${id}"><circle cx="${cx}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="white"/>`
       +`<circle cx="${(cx-r*0.5).toFixed(1)}" cy="${(cy-r*0.5).toFixed(1)}" r="${(r*1.02).toFixed(1)}" fill="black"/></mask>`
       +`<g mask="url(#sm${id})">`+K.hatch(c,c,{angle:35,spacing:8,width:1.4,id:'sa'+id})+`</g>`;
   }
-  if(stage>=2){   // core shadow — a second pass on the darker band
-    s+=`<mask id="sn${id}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="white"/>`
-      +`<circle cx="${(cx-r*0.32).toFixed(1)}" cy="${(cy-r*0.32).toFixed(1)}" r="${(r*1.0).toFixed(1)}" fill="black"/>`
+  if(stage>=2){
+    s+=`<mask id="sn${id}"><circle cx="${cx}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="white"/>`
+      +`<circle cx="${(cx-r*0.32).toFixed(1)}" cy="${(cy-r*0.32).toFixed(1)}" r="${r.toFixed(1)}" fill="black"/>`
       +`<circle cx="${(cx+r*0.62).toFixed(1)}" cy="${(cy+r*0.62).toFixed(1)}" r="${(r*0.62).toFixed(1)}" fill="black"/></mask>`
       +`<g mask="url(#sn${id})">`+K.hatch(c,c,{angle:125,spacing:6,width:1.5,id:'sb'+id})+`</g>`;
   }
-  if(stage>=3){   // contact shadow on the ground
-    s+=K.line(0,c*0.78,c,c*0.78,{c:'var(--guide)',w:1})
-      +castShadow(cx+r*0.55,c*0.78,r*1.05,r*0.24,'m7'+id);
-  }
+  if(stage>=3) s+=castShadow(cx+r*0.5,gy,r*1.0,sh,'m7'+id);
   return s+outline;
 }
 
@@ -451,24 +472,22 @@ function cube(c,stage,id,light=1){
 }
 
 function cylinder(c,stage,id){
-  const cx=c/2, y0=c*0.20, y1=c*0.74, r=c*0.19;
-  if(stage==null) return K.cylinderAxis(cx,y0,cx,y1,r,{filled:false,id:'cyo'+id});
-  let s='';
+  const r=c*0.19, sh=r*0.26, h=c*0.50, cap=r*0.34;
+  const span=h+2*cap, t=(c-span)/2;
+  const cx=c/2, y0=t+cap, y1=y0+h, gy=y1;
+  const outline=K.cylinderAxis(cx,y0,cx,y1,r,{filled:stage!=null,id:(stage==null?'cyo':'cy')+id});
+  let s=K.line(0,gy,c,gy,{c:'var(--guide)',w:1});
   const body=`M${(cx-r).toFixed(1)} ${y0.toFixed(1)}L${(cx-r).toFixed(1)} ${y1.toFixed(1)}L${(cx+r).toFixed(1)} ${y1.toFixed(1)}L${(cx+r).toFixed(1)} ${y0.toFixed(1)}Z`;
-  if(stage>=1){   // strokes follow the curve: vertical, tightening to the right
+  if(stage>=1)
     s+=`<clipPath id="cl${id}"><path d="${body}"/></clipPath><g clip-path="url(#cl${id})">`
       +K.hatch(c,c,{angle:90,spacing:9,width:1.3,id:'ca'+id})+`</g>`;
-  }
   if(stage>=2){
     const dark=`M${(cx+r*0.15).toFixed(1)} ${y0.toFixed(1)}L${(cx+r*0.15).toFixed(1)} ${y1.toFixed(1)}L${(cx+r).toFixed(1)} ${y1.toFixed(1)}L${(cx+r).toFixed(1)} ${y0.toFixed(1)}Z`;
     s+=`<clipPath id="cd${id}"><path d="${dark}"/></clipPath><g clip-path="url(#cd${id})">`
       +K.hatch(c,c,{angle:90,spacing:5,width:1.6,id:'cb'+id})+`</g>`;
   }
-  if(stage>=3){
-    s+=K.line(0,c*0.82,c,c*0.82,{c:'var(--guide)',w:1})
-      +castShadow(cx+r*0.9,c*0.82,r*1.5,r*0.28,'m9'+id);
-  }
-  return s+K.cylinderAxis(cx,y0,cx,y1,r,{filled:true,id:'cy'+id});
+  if(stage>=3) s+=castShadow(cx+r*0.8,gy,r*1.4,sh,'m9'+id);
+  return s+outline;
 }
 
 const TEXTURE=[
@@ -476,19 +495,22 @@ const TEXTURE=[
     s+=`<path d="M6 ${y}Q${c/3} ${y-7} ${c/2} ${y}T${c-6} ${y}" stroke="var(--ink)" stroke-width="1.2" fill="none"/>`;}return s;},
   (c,id)=>K.stipple(c,c,70,4400),
   (c,id)=>K.hatch(c,c,{angle:45,spacing:7,width:1.2,id:id+'a'})+K.hatch(c,c,{angle:135,spacing:7,width:1.2,id:id+'b'}),
-  (c,id)=>{let s='';for(let i=0;i<10;i++){const y=12+i*(c-24)/9;
-    for(let x=8;x<c-8;x+=34)s+=K.line(x,y,x+20,y,{c:'var(--ink)',w:1.3});}return s;},
+  (c,id)=>{let s='';const cols=4,gap=(c-24)/cols,len=gap*0.62;
+    const x0=(c-(3*gap+len))/2;
+    for(let i=0;i<10;i++){const y=12+i*(c-24)/9;
+      for(let k=0;k<cols;k++)s+=K.line(x0+k*gap,y,x0+k*gap+len,y,{c:'var(--ink)',w:1.3});}
+    return s;},
 ];
 const CONTOUR=[
   (c,col,w)=>`<path d="M${c*0.5} ${c*0.16}C${c*0.82} ${c*0.3} ${c*0.82} ${c*0.7} ${c*0.5} ${c*0.86}C${c*0.18} ${c*0.7} ${c*0.18} ${c*0.3} ${c*0.5} ${c*0.16}Z" stroke="${col}" stroke-width="${w}" fill="none"/>`
     +K.line(c*0.5,c*0.16,c*0.5,c*0.86,{c:col,w:w*0.6}),
   (c,col,w)=>`<path d="M${c*0.5} ${c*0.16}C${c*0.86} ${c*0.2} ${c*0.88} ${c*0.74} ${c*0.5} ${c*0.84}C${c*0.12} ${c*0.74} ${c*0.14} ${c*0.2} ${c*0.5} ${c*0.16}Z" stroke="${col}" stroke-width="${w}" fill="none"/>`,
-  (c,col,w)=>`<path d="M${c*0.2} ${c*0.62}C${c*0.26} ${c*0.34} ${c*0.62} ${c*0.28} ${c*0.78} ${c*0.44}C${c*0.86} ${c*0.62} ${c*0.6} ${c*0.78} ${c*0.34} ${c*0.74}Z" stroke="${col}" stroke-width="${w}" fill="none"/>`,
+  (c,col,w)=>`<path d="M${c*0.2} ${c*0.57}C${c*0.26} ${c*0.29} ${c*0.62} ${c*0.23} ${c*0.78} ${c*0.39}C${c*0.86} ${c*0.57} ${c*0.6} ${c*0.73} ${c*0.34} ${c*0.69}Z" stroke="${col}" stroke-width="${w}" fill="none"/>`,
 ];
 const SIL={
-  chair:(c)=>`M${c*0.3} ${c*0.2}L${c*0.7} ${c*0.2}L${c*0.7} ${c*0.56}L${c*0.78} ${c*0.56}L${c*0.78} ${c*0.84}L${c*0.7} ${c*0.84}L${c*0.7} ${c*0.64}L${c*0.3} ${c*0.64}L${c*0.3} ${c*0.84}L${c*0.22} ${c*0.84}L${c*0.22} ${c*0.56}L${c*0.3} ${c*0.56}Z`,
-  bowl:(c)=>`M${c*0.16} ${c*0.44}A${c*0.34} ${c*0.34} 0 0 0 ${c*0.84} ${c*0.44}Z`,
-  branch:(c)=>`M${c*0.18} ${c*0.82}L${c*0.82} ${c*0.24}M${c*0.42} ${c*0.58}A${c*0.14} ${c*0.1} 0 0 1 ${c*0.62} ${c*0.46}M${c*0.56} ${c*0.44}A${c*0.13} ${c*0.1} 0 0 0 ${c*0.4} ${c*0.34}`,
+  chair:(c)=>`M${c*0.3} ${c*0.18}L${c*0.7} ${c*0.18}L${c*0.7} ${c*0.54}L${c*0.78} ${c*0.54}L${c*0.78} ${c*0.82}L${c*0.7} ${c*0.82}L${c*0.7} ${c*0.62}L${c*0.3} ${c*0.62}L${c*0.3} ${c*0.82}L${c*0.22} ${c*0.82}L${c*0.22} ${c*0.54}L${c*0.3} ${c*0.54}Z`,
+  bowl:(c)=>`M${c*0.16} ${c*0.33}A${c*0.34} ${c*0.34} 0 0 0 ${c*0.84} ${c*0.33}Z`,
+  branch:(c)=>`M${c*0.18} ${c*0.79}L${c*0.82} ${c*0.21}M${c*0.42} ${c*0.55}A${c*0.14} ${c*0.1} 0 0 1 ${c*0.62} ${c*0.43}M${c*0.56} ${c*0.41}A${c*0.13} ${c*0.1} 0 0 0 ${c*0.4} ${c*0.31}`,
 };
 function negSpace(sil,c,filled,id){const d=sil(c);
   if(!filled)return `<path d="${d}" stroke="var(--guide-l)" stroke-width="1.2" fill="none"/>`;
@@ -537,68 +559,91 @@ function cylAxis(c,i,filled){
   return K.line(a[0],a[1],a[2],a[3],{c:'var(--guide)',w:1,dash:'4 5'})
     + K.cylinderAxis(a[0],a[1],a[2],a[3],r,{filled,id:'cx'+i+(filled?'e':'y')});
 }
-const CYL_AX=(c)=>[[c/2,c*0.18,c/2,c*0.82],[c*0.16,c/2,c*0.84,c/2],[c*0.22,c*0.80,c*0.78,c*0.22]];
-const CONE_AX=(c)=>[[c/2,c*0.76,c/2,c*0.18],[c*0.30,c*0.78,c*0.72,c*0.24],[c/2,c*0.24,c/2,c*0.80]];
+const CYL_AX=(c)=>[[c/2,c*0.18,c/2,c*0.82],[c*0.16,c/2,c*0.84,c/2],[c*0.20,c*0.80,c*0.80,c*0.20]];
+/* each attitude keeps its axis symmetric about the cell centre, so the three
+   rows read as one form turning rather than three drawings drifting */
+const CONE_AX=(c)=>[[c/2,c*0.78,c/2,c*0.22],[c*0.26,c*0.76,c*0.74,c*0.24],[c/2,c*0.22,c/2,c*0.78]];
 /* YOURS gets the axis only — standing the two ellipses on one axis IS the drill */
 function cylAxisGuide(c,i){const a=CYL_AX(c)[i];
   return K.line(a[0],a[1],a[2],a[3],{c:'var(--guide)',w:1,dash:'4 5'})
     +K.dot(a[0],a[1],2.6,'var(--guide)')+K.dot(a[2],a[3],2.6,'var(--guide)');}
 function coneGuide(c,i){const a=CONE_AX(c)[i];
-  return K.line(a[0],a[1],a[2],a[3],{c:'var(--guide)',w:1,dash:'4 5'})
-    +K.dot(a[2],a[3],2.6,'var(--guide)');}
+  /* centre the axis the same way coneAxis centres the cone, so the pair of
+     cells line up across the arrow */
+  const o=K.capOverhang(a[0],a[1],a[2],a[3],c*0.20);
+  const dx=c/2-(Math.min(a[2],a[0]-o.x)+Math.max(a[2],a[0]+o.x))/2;
+  const dy=c/2-(Math.min(a[3],a[1]-o.y)+Math.max(a[3],a[1]+o.y))/2;
+  return `<g transform="translate(${dx.toFixed(1)} ${dy.toFixed(1)})">`
+    +K.line(a[0],a[1],a[2],a[3],{c:'var(--guide)',w:1,dash:'4 5'})
+    +K.dot(a[2],a[3],2.6,'var(--guide)')+`</g>`;}
 function cone(c,i,filled){
   const a=CONE_AX(c)[i];
-  return K.coneAxis(a[0],a[1],a[2],a[3],c*0.20,{filled});
+  return K.coneAxis(a[0],a[1],a[2],a[3],c*0.20,{filled,fit:c});
 }
 function contourSphere(c,i,filled){
   return K.sphereContours(c/2,c/2,c*0.30,[0,28,-22][i],{filled});
 }
 function combined(c,i,filled){
-  const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  if(i===0)  // a box with a cylinder standing on it
-    return K.isoBox(c,28,{filled,id:'cm0'+(filled?'e':'y'),h:0.22})
-      + K.cylinderAxis(c*0.50,c*0.40,c*0.50,c*0.12,c*0.13,{filled,id:'cmc'+(filled?'e':'y')});
+  /* refH is the height the pair is centred against, so the cylinder riding on
+     top is counted too — centring on the box alone leaves the stack low. */
+  const R=0.364;
+  if(i===0)   // a cylinder standing on a box
+    return K.isoBox(c,28,{filled,id:'cm0'+(filled?'e':'y'),h:0.20,refH:R})
+      + K.cylinderAxis(c*0.50,c*0.52,c*0.50,c*0.24,c*0.13,{filled,id:'cmc'+(filled?'e':'y')});
   // a cone seated on a cylinder
-  return K.cylinderAxis(c*0.50,c*0.78,c*0.50,c*0.50,c*0.17,{filled,id:'cm1'+(filled?'e':'y')})
-    + K.coneAxis(c*0.50,c*0.50,c*0.50,c*0.16,c*0.17,{filled});
+  return K.cylinderAxis(c*0.50,c*0.73,c*0.50,c*0.49,c*0.17,{filled,id:'cm1'+(filled?'e':'y')})
+    + K.coneAxis(c*0.50,c*0.49,c*0.50,c*0.21,c*0.17,{filled});
 }
+/* Cross-sections must lie ON the form, so they are evaluated on the curve
+   rather than placed by an independent formula — otherwise EXAMPLE (curve +
+   sections) and YOURS (curve alone) centre at different heights. The curve
+   centres itself on its sampled bounds, so no hand-tuned offsets. */
+const SECTION_CURVES=[
+  [[0.16,0.67],[0.28,0.19],[0.72,0.25],[0.84,0.63]],
+  [[0.16,0.34],[0.34,0.80],[0.66,0.18],[0.84,0.62]],
+  [[0.18,0.75],[0.30,0.31],[0.62,0.69],[0.82,0.25]],
+];
+const bez=(P,t)=>{const u=1-t;
+  return [u*u*u*P[0][0]+3*u*u*t*P[1][0]+3*u*t*t*P[2][0]+t*t*t*P[3][0],
+          u*u*u*P[0][1]+3*u*u*t*P[1][1]+3*u*t*t*P[2][1]+t*t*t*P[3][1]];};
 function section(c,i,filled){
-  /* one free curve, sliced — the sections show how the surface turns */
-  const curves=[
-    `M${c*0.16} ${c*0.70}C${c*0.28} ${c*0.22} ${c*0.72} ${c*0.28} ${c*0.84} ${c*0.66}`,
-    `M${c*0.16} ${c*0.34}C${c*0.34} ${c*0.80} ${c*0.66} ${c*0.18} ${c*0.84} ${c*0.62}`,
-    `M${c*0.18} ${c*0.78}C${c*0.30} ${c*0.34} ${c*0.62} ${c*0.72} ${c*0.82} ${c*0.28}`];
+  const P=SECTION_CURVES[i].map(([x,y])=>[x*c,y*c]);
+  const pts=[];for(let k=0;k<=40;k++)pts.push(bez(P,k/40));
+  const xs=pts.map(q=>q[0]),ys=pts.map(q=>q[1]);
+  const dx=c/2-(Math.min(...xs)+Math.max(...xs))/2,dy=c/2-(Math.min(...ys)+Math.max(...ys))/2;
   const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
-  let s=`<path d="${curves[i]}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
-  if(filled) for(const t of [0.3,0.5,0.7]){
-    const x=c*(0.16+0.68*t), y=c*(0.46+0.10*Math.sin(t*6+i));
-    s+=`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(c*0.09).toFixed(1)}" ry="${(c*0.032).toFixed(1)}" fill="none" stroke="var(--guide)" stroke-width="1"/>`;
+  const n=(v)=>v.toFixed(1);
+  let s=`<path d="M${n(P[0][0])} ${n(P[0][1])}C${n(P[1][0])} ${n(P[1][1])} ${n(P[2][0])} ${n(P[2][1])} ${n(P[3][0])} ${n(P[3][1])}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  if(filled) for(const t of [0.25,0.5,0.75]){
+    const [x,y]=bez(P,t);
+    s+=`<ellipse cx="${n(x)}" cy="${n(y)}" rx="${n(c*0.085)}" ry="${n(c*0.030)}" fill="none" stroke="var(--guide)" stroke-width="1"/>`;
   }
-  return s;
+  return `<g transform="translate(${n(dx)} ${n(dy)})">${s}</g>`;
 }
 function vessel(c,i,filled){
   const st=filled?'var(--ink)':'var(--guide-l)',sw=filled?1.6:1.2;
   if(i===0){  // 壺 — the moon jar, built from stacked ellipses
-    let s=`<path d="M${c*0.40} ${c*0.22}C${c*0.12} ${c*0.34} ${c*0.12} ${c*0.72} ${c*0.50} ${c*0.80}C${c*0.88} ${c*0.72} ${c*0.88} ${c*0.34} ${c*0.60} ${c*0.22}Z" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
-    if(filled) s+=K.ellipse(c*0.50,c*0.22,c*0.10,c*0.035,{c:'var(--guide)',w:1})
-      +K.ellipse(c*0.50,c*0.50,c*0.375,c*0.115,{c:'var(--guide)',w:1})
-      +K.ellipse(c*0.50,c*0.80,c*0.085,c*0.03,{c:'var(--guide)',w:1});
+    let s=`<path d="M${c*0.40} ${c*0.205}C${c*0.12} ${c*0.325} ${c*0.12} ${c*0.705} ${c*0.50} ${c*0.785}C${c*0.88} ${c*0.705} ${c*0.88} ${c*0.325} ${c*0.60} ${c*0.205}Z" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+    if(filled) s+=K.ellipse(c*0.50,c*0.205,c*0.10,c*0.035,{c:'var(--guide)',w:1})
+      +K.ellipse(c*0.50,c*0.485,c*0.375,c*0.115,{c:'var(--guide)',w:1})
+      +K.ellipse(c*0.50,c*0.785,c*0.085,c*0.03,{c:'var(--guide)',w:1});
     return s;
   }
-  let s=`<path d="M${c*0.22} ${c*0.38}C${c*0.26} ${c*0.74} ${c*0.74} ${c*0.74} ${c*0.78} ${c*0.38}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
-  if(filled) s+=K.ellipse(c*0.50,c*0.38,c*0.28,c*0.085,{c:'var(--guide)',w:1})
-    +K.ellipse(c*0.50,c*0.685,c*0.115,c*0.035,{c:'var(--guide)',w:1});
+  let s=`<path d="M${c*0.22} ${c*0.372}C${c*0.26} ${c*0.732} ${c*0.74} ${c*0.732} ${c*0.78} ${c*0.372}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
+  if(filled) s+=K.ellipse(c*0.50,c*0.372,c*0.28,c*0.085,{c:'var(--guide)',w:1})
+    +K.ellipse(c*0.50,c*0.677,c*0.115,c*0.035,{c:'var(--guide)',w:1});
   return s;
 }
 function objBox(c,i,filled){
   /* the faint CAGE is the object's bounding box; the solid form sits inside it */
   const prop=[{h:0.16,w:0.50,d:0.34},{h:0.34,w:0.38,d:0.30},{h:0.32,w:0.44,d:0.32}][i];
-  const cage=K.isoBox(c,26,{filled:false,cage:true,id:'ob'+i+(filled?'e':'y'),h:prop.h});
+  const R=prop.h;   // every part of this cell centres against the cage
+  const cage=K.isoBox(c,26,{filled:false,cage:true,id:'ob'+i+(filled?'e':'y'),h:R});
   if(!filled) return cage;
   const st='var(--ink)',sw=1.6;
   if(i===0){   // 書 — a flat block on the floor of the cage, with a spine
-    const bk=K.boxPoints(c,26,{w:prop.w-0.02,d:prop.d-0.02,h:0.11});
-    return cage+K.isoBox(c,26,{filled:true,id:'obk',h:0.11})
+    const bk=K.boxPoints(c,26,{w:prop.w-0.02,d:prop.d-0.02,h:0.11,refH:R});
+    return cage+K.isoBox(c,26,{filled:true,id:'obk',h:0.11,refH:R})
       +K.line(bk.top[0][0],bk.top[0][1],bk.top[3][0],bk.top[3][1],{c:st,w:1});
   }
   if(i===1)    // 盞 — an ellipse mouth and a tapering body inside the cage
@@ -607,7 +652,7 @@ function objBox(c,i,filled){
       +K.line(c*0.655,c*0.40,c*0.60,c*0.70,{c:st,w:sw})
       +`<path d="M${c*0.40} ${c*0.70}A${c*0.10} ${c*0.04} 0 0 0 ${c*0.60} ${c*0.70}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
   // 箱 — an open box: the rim sits just inside the cage, the far walls show
-  const o=K.boxPoints(c,26,{w:prop.w-0.04,d:prop.d-0.04,h:0.26});
+  const o=K.boxPoints(c,26,{w:prop.w-0.04,d:prop.d-0.04,h:0.26,refH:R});
   const P=(pts)=>'M'+pts.map(([x,y])=>`${x.toFixed(1)} ${y.toFixed(1)}`).join('L')+'Z';
   let s=cage+`<path d="${P(o.top)}" stroke="${st}" stroke-width="${sw}" fill="none"/>`;
   let front=0; o.base.forEach(([,y],k)=>{ if(y>o.base[front][1]) front=k; });
@@ -862,6 +907,8 @@ console.log(`Links ${links} = tabs ${tabLinks} (7 \u00d7 ${pages.length - 1} \u2
 console.log(`            + contents ${tocLinks} (52 drills + 3 free + 2 record)`);
 console.log(`            + drill log ${logLinks}`);
 if (!texture) console.log('\u26a0  assets/inae/hanji-1080x1440.png missing \u2014 flat paper. Run: node tools/inae-texture.mjs');
+if (cellTable) { writeFileSync(process.env.INAE_AUDIT, JSON.stringify(cellTable));
+  console.log(`Audit: wrote ${cellTable.length} cell rects \u2192 ${process.env.INAE_AUDIT}`); }
 if (fontNote) console.log(fontNote);
 if (overflows.length) {
   console.log(`\u26a0  ${overflows.length} page(s) overflow the body box:`);
