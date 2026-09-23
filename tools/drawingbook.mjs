@@ -112,6 +112,17 @@ const overflows = [];   // drills whose rows do not fit the body box
    build can measure what actually got drawn. Off by default. */
 const cellTable = process.env.INAE_AUDIT ? [] : null;
 const BODY_X = 84, BODY_Y = 356;
+/* Any page that draws art inside a frame registers it here, not just layout A —
+   x02's demo was drifting precisely because nothing measured it. */
+const registerCell = (at, x, y, c, mode = 'centre') => {
+  if (cellTable) cellTable.push({ at, x: BODY_X + x, y: BODY_Y + y, c, mode });
+};
+/* Layout B's band and field are not meant to be centred — the field is mostly
+   empty by design and the band holds a composition. What IS checkable is that
+   nothing spills past the frame, which is how s06's scene escaped its band. */
+const registerBox = (at, x, y, w, h) => {
+  if (cellTable) cellTable.push({ at, x: BODY_X + x, y: BODY_Y + y, w, h, mode: 'contain' });
+};
 
 function rowsGeom(n, cell) {
   /* Shrink to fit when a drill has many rows — f10 turns a box in seven 15°
@@ -169,7 +180,9 @@ function layoutB(p) {
     html += `<div class="lab" style="left:0;top:-18px">EXAMPLE</div>`
           + `<div class="lab" style="left:0;top:${fy - 18}px">YOURS</div>`;
     svg += `<g>${p.band ? p.band(W, B_BAND) : ''}</g>`;
+    registerBox(`${p.id}:band`, 0, 0, W, B_BAND);
   }
+  registerBox(`${p.id}:field`, 0, fy, W, fh);
   svg += `<g transform="translate(0 ${fy})">${p.field ? p.field(W, fh) : ''}</g>`;
   svg += K.rect(0, fy, W, fh, { c: 'var(--hair)' });
   return html + K.svg(W, H, svg);
@@ -184,7 +197,9 @@ const seeded = K.rng;
 const LINE = [
   ['l01','橫線','Horizontal lines','Connect each pair of dots in one stroke.','5–10', {
     layout:'B', band:(w)=>K.dotPairs({rows:2,len:780,pitch:64,x:66,y:70}),
-    field:(w,h)=>K.dotPairs({rows:12,len:780,pitch:64,x:66,y:40}) }],
+    /* 12 rows at a 64px pitch is 704px of travel — centre it rather than
+       starting at a fixed offset, which ran the last row out of the field */
+    field:(w,h)=>K.dotPairs({rows:12,len:780,pitch:64,x:66,y:(h-11*64)/2}) }],
   ['l02','縱線','Vertical lines','Top to bottom. Don&rsquo;t slow down at the end.','5–10', {
     layout:'B', band:(w)=>K.dotPairs({rows:3,len:140,pitch:92,x:120,y:30,vertical:true}),
     field:(w,h)=>K.dotPairs({rows:10,len:700,pitch:92,x:42,y:15,vertical:true}) }],
@@ -242,8 +257,8 @@ const INK = [
     layout:'A', rows:3, rowLabels:['疎','中','密'],
     example:(i,c)=>scribble(c,c,[90,220,420][i],9100+i) }],
   ['m05','七段','Seven-step scale','Fill each cell one step darker than the last.','15', {
-    layout:'B', band:(w,h)=>stepBar(w,h,7,true),
-    field:(w,h)=>stepBar(w,h,7,false) }],
+    layout:'B', band:(w,h)=>stepBarExample(w,h,7),
+    field:(w,h)=>stepBarField(w,h,7) }],
   ['m06','漸層','Gradient','Light to dark without visible steps.','15', {
     layout:'B', band:(w,h)=>gradBar(w,120,'m06b'),
     field:(w,h)=>K.rect(0,(h-120)/2,w,120,{c:'var(--guide-l)'}) }],
@@ -312,7 +327,11 @@ const SPACE = [
     layout:'B', bare:true, field:(w,h)=>K.frames(w,3,2,{gap:30,thirds:true}).svg }],
   ['s06','裁斷','Crop','Redraw each crop from the scene above.','20', {
     layout:'B', band:(w,h)=>scene(w,h),
-    field:(w,h)=>K.frames(w,4,1,{gap:26}).svg }],
+    /* landscape crops of a landscape scene, 2x2 so they fill the field
+       instead of huddling along its top edge */
+    field:(w,h)=>{const g=K.frames(w,2,2,{gap:40,ratio:0.75});
+      const blk=2*g.fh+40, off=Math.max(0,(h-blk)/2);
+      return `<g transform="translate(0 ${off.toFixed(0)})">${g.svg}</g>`;} }],
   /* the given mass is deliberately off-centre — balancing it is the drill, so
      this page is expected to fail a centring audit */
   ['s07','均衡','Balance','Add one shape to balance the frame.','10–15', {
@@ -413,10 +432,17 @@ function scribble(w,h,steps,seed){
   const dx=w/2-(Math.min(...xs)+Math.max(...xs))/2,dy=h/2-(Math.min(...ys)+Math.max(...ys))/2;
   const d=pts.map(([px,py],i)=>(i?'L':'M')+(px+dx).toFixed(1)+' '+(py+dy).toFixed(1)).join('');
   return `<path d="${d}" stroke="var(--ink)" stroke-width="1" fill="none"/>`;}
-function stepBar(w,h,n,filled){const bw=w/n,y=(h-140)/2;let s='';
-  for(let i=0;i<n;i++){s+=K.rect(i*bw,y,bw,140,{c:'var(--hair)'});
-    if(filled){const v=1-i/(n-1)*0.9;s+=`<g transform="translate(${i*bw} ${y})">`
-      +K.hatch(bw,140,{angle:45,spacing:Math.max(3,10-i*1.2),width:1+i*0.25,id:'sb'+i})+`</g>`;}}
+/* Seven steps read as a strip, so EXAMPLE is a band of hatched cells and
+   YOURS is the same seven divisions running the full height of the field —
+   a thin strip floating in the middle of a tall empty box reads as a mistake. */
+function stepBarExample(w,h,n){const bw=w/n,bh=160,y=(h-bh)/2;let s='';
+  for(let i=0;i<n;i++){
+    s+=`<g transform="translate(${(i*bw).toFixed(1)} ${y})">`
+      +K.hatch(bw,bh,{angle:45,spacing:Math.max(3,10-i*1.2),width:1+i*0.25,id:'sb'+i})+`</g>`;
+    s+=K.rect(i*bw,y,bw,bh,{c:'var(--hair)'});}
+  return s;}
+function stepBarField(w,h,n){const bw=w/n;let s='';
+  for(let i=1;i<n;i++)s+=K.line(i*bw,0,i*bw,h,{c:'var(--hair)',w:1});
   return s;}
 function gradBar(w,h,id){const y=40;let s='';
   for(let i=0;i<24;i++){const t=i/23,sp=12-t*9,wd=0.25+t*1.9;
@@ -517,11 +543,15 @@ function negSpace(sil,c,filled,id){const d=sil(c);
   return `<mask id="ns${id}"><rect width="${c}" height="${c}" fill="white"/><path d="${d}" fill="black"/></mask>`
     +`<g mask="url(#ns${id})">`+K.hatch(c,c,{angle:45,spacing:6,width:1.6,id:'n'+id})+`</g>`
     +`<path d="${d}" stroke="var(--ink)" stroke-width="1.4" fill="none"/>`;}
-function scene(w,h){return K.line(0,h-24,w,h-24,{c:'var(--guide)'})
-  +K.rect(w*0.12,h*0.3,w*0.16,h*0.58,{c:'var(--ink)',sw:1.4})
-  +K.ellipse(w*0.42,h*0.66,w*0.07,w*0.07,{c:'var(--ink)',w:1.4})
-  +K.rect(w*0.56,h*0.46,w*0.2,h*0.42,{c:'var(--ink)',sw:1.4})
-  +K.ellipse(w*0.86,h*0.2,w*0.05,w*0.05,{c:'var(--guide)',w:1.2});}
+/* Every size is derived from the BAND height, not the page width — sizing a
+   circle by width and placing it by height is how the old scene spilled out
+   of its band. */
+function scene(w,h){const gy=h-20,u=h*0.34;
+  return K.line(0,gy,w,gy,{c:'var(--guide)'})
+    +K.rect(w*0.14,gy-u*1.7,u*1.2,u*1.7,{c:'var(--ink)',sw:1.4})
+    +K.ellipse(w*0.40,gy-u*0.55,u*0.55,u*0.55,{c:'var(--ink)',w:1.4})
+    +K.rect(w*0.58,gy-u*1.1,u*1.6,u*1.1,{c:'var(--ink)',sw:1.4})
+    +K.ellipse(w*0.88,gy-u*2.1,u*0.40,u*0.40,{c:'var(--guide)',w:1.2});}
 function onePoint(w,h,n){const vx=w/2,vy=h*0.42;let s=K.rays(vx,vy,w,h,12);
   for(let i=0;i<n;i++){const x=60+i*(w-200)/n,y=h*0.62,bw=110,bh=84;
     s+=K.rect(x,y,bw,bh,{c:'var(--ink)',sw:1.6});}
@@ -547,7 +577,13 @@ function threePoint(w,h,dir){const hy=dir==='up'?h*0.72:h*0.28,ty=dir==='up'?-h*
   const x=w*0.48,y0=dir==='up'?hy-320:hy+60,y1=dir==='up'?hy-40:hy+340;
   s+=K.line(x,y0,x,y1,{c:'var(--ink)',w:1.6});
   for(const y of [y0,y1])s+=K.line(6,hy,x,y,{c:'var(--guide-l)'})+K.line(w-6,hy,x,y,{c:'var(--guide-l)'});
-  for(const t of [0.3,0.48,0.66])s+=K.line(t*w,dir==='up'?h:0,x,ty,{c:'var(--guide-l)'});
+  /* the third vanishing point is off the page — that is the whole idea — so the
+     rays toward it are cut at the field edge instead of drawn past it */
+  for(const t of [0.3,0.48,0.66]){
+    const ax=t*w, ay=dir==='up'?h:0;
+    const k=(dir==='up'?0-ay:h-ay)/(ty-ay);
+    s+=K.line(ax,ay,ax+(x-ax)*k,dir==='up'?0:h,{c:'var(--guide-l)'});
+  }
   return s+`<text x="${x+16}" y="${dir==='up'?18:h-8}" fill="var(--muted)" font-size="11.5" font-family="Inter,system-ui,sans-serif" font-weight="500" letter-spacing=".9">VP · ${dir==='up'?'UP':'DOWN'}</text>`;}
 function rotBox(c,deg,filled){
   return K.isoBox(c,deg,{filled,id:'rb'+deg+(filled?'e':'y')});
@@ -743,30 +779,60 @@ function coverHtml() {
 function howtoHtml() {
   const step = (y, n, t, d) =>
     `<div class="lab" style="left:0;top:${y}px">${n}</div>`
-    + `<div style="position:absolute;left:0;top:${y + 24}px;font-family:var(--display);`
+    + `<div style="position:absolute;left:0;top:${y + 22}px;font-family:var(--display);`
     + `font-size:23px;font-weight:300;color:var(--ink)">${t}</div>`
-    + `<div style="position:absolute;left:0;top:${y + 60}px;width:430px;font-size:14px;`
+    + `<div style="position:absolute;left:0;top:${y + 58}px;width:404px;font-size:14px;`
     + `font-weight:500;color:var(--muted);line-height:1.7">${d}</div>`;
-  const demo = K.svg(390, 190,
-    K.rect(0, 30, 150, 150, { c: 'var(--hair)' })
-    + K.valueBox(150, 150, 0.5, 'howto').replace('<clipPath', '<clipPath')
-    + K.line(196, 105, 236, 105, { c: 'var(--guide)' })
-    + `<path d="M229 101L236 105L229 109" stroke="var(--guide)" stroke-width="1" fill="none"/>`
-    + K.rect(240, 30, 150, 150, { c: 'var(--hair)' }));
+
+  /* A miniature of the real drill layout, since that is what the page teaches.
+     The hatch is translated INTO its frame — drawn at the origin it sits a
+     cell-offset above, which is exactly how this page drifted before. */
+  const DX = 470, DY = 26, CELL = 150, GAP = 90;
+  const demo = K.svg(CELL * 2 + GAP, CELL,
+    `<g transform="translate(0 0)">${K.valueBox(CELL, CELL, 0.5, 'howto')}</g>`
+    + K.rect(0, 0, CELL, CELL, { c: 'var(--hair)' })
+    + K.line(CELL + 29, CELL / 2, CELL + 61, CELL / 2, { c: 'var(--guide)' })
+    + `<path d="M${CELL + 54} ${CELL / 2 - 4}L${CELL + 61} ${CELL / 2}L${CELL + 54} ${CELL / 2 + 4}" `
+    + `stroke="var(--guide)" stroke-width="1" fill="none"/>`
+    + K.rect(CELL + GAP, 0, CELL, CELL, { c: 'var(--hair)' }))
+      .replace('<svg', '<svg style="position:absolute;left:0;top:0"');
+  registerCell('x02:0:E', DX, DY, CELL);
+  registerCell('x02:0:Y', DX + CELL + GAP, DY, CELL);
+
+  const parts = SECTIONS.slice(1).map((sec) => {
+    const n = pages.filter((p) => p.key === sec.key && p.drill).length;
+    const all = pages.filter((p) => p.key === sec.key && p.title).length;
+    return { ...sec, n, all };
+  });
+  const row = (p, i) => {
+    const y = 556 + i * 52;
+    return `<a href="#${aid(p.first)}" style="position:absolute;left:0;top:${y}px;width:912px">`
+      + `<span style="font-family:var(--han);font-size:19px;color:var(--ink)">${p.mark}</span>`
+      + `<span style="position:absolute;left:150px;top:4px;font-size:14px;font-weight:500;`
+      + `letter-spacing:var(--ls-caps);color:var(--muted)">${p.label}</span>`
+      + `<span style="position:absolute;left:330px;top:4px;font-size:14px;font-weight:500;color:var(--muted)">`
+      + `${p.n ? `${p.n} drills` : `${p.all} templates`}</span>`
+      + `<span style="position:absolute;right:0;top:4px;font-size:13px;font-weight:500;color:var(--guide)">`
+      + `p.&nbsp;${pages.find((q) => q.id === p.first).folio}</span>`
+      + `<span style="position:absolute;left:0;top:34px;width:912px;height:1px;background:var(--hair)"></span></a>`;
+  };
+
   return step(0, 'ONE', 'EXAMPLE on the left.',
       'The left cell is already drawn. Read the density, the angle, the weight &mdash; that is the target.')
-    + step(200, 'TWO', 'YOURS on the right.',
+    + step(150, 'TWO', 'YOURS on the right.',
       'Match it in the empty cell. One pen, one opacity. A firm brush at 100% opacity keeps the value honest.')
-    + step(400, 'THREE', 'Repeat as often as you like.',
+    + step(300, 'THREE', 'Repeat as often as you like.',
       'Duplicate any page to repeat a drill. Nothing in this book is dated, so it never expires.')
-    + `<div style="position:absolute;left:500px;top:24px">`
-    + `<div class="lab" style="left:0;top:0">EXAMPLE</div>`
-    + `<div class="lab" style="left:240px;top:0">YOURS</div>${demo}</div>`
-    + `<div style="position:absolute;left:0;top:640px;width:912px;height:1px;background:var(--hair)"></div>`
-    + `<div style="position:absolute;left:0;top:668px;font-family:var(--han);font-size:17px;color:var(--ink)">五部 · 五十二 練習</div>`
-    + `<div style="position:absolute;left:0;top:706px;width:912px;font-size:14px;font-weight:500;color:var(--muted);line-height:1.8">`
-    + SECTIONS.slice(1, 6).map((s) => `${s.tab} ${s.label}`).join(' &nbsp;·&nbsp; ')
-    + `<br>Tap any tab along the top edge to jump between them. The contents page lists every drill.</div>`;
+    + `<div style="position:absolute;left:${DX}px;top:${DY}px;width:${CELL * 2 + GAP}px;height:${CELL}px">`
+    + `<div class="lab" style="left:0;top:-18px">EXAMPLE</div>`
+    + `<div class="lab" style="left:${CELL + GAP}px;top:-18px">YOURS</div>${demo}</div>`
+    + `<div style="position:absolute;left:0;top:462px;width:912px;height:1px;background:var(--hair)"></div>`
+    + `<div style="position:absolute;left:0;top:492px;font-family:var(--han);font-size:19px;color:var(--ink)">`
+    + `五部 &middot; 五十二 練習</div>`
+    + parts.map(row).join('')
+    + `<div style="position:absolute;left:0;top:${556 + parts.length * 52 + 22}px;width:912px;`
+    + `font-size:14px;font-weight:500;color:var(--muted);line-height:1.8">`
+    + `Tap any tab along the top edge to jump between the parts, or use the contents page opposite.</div>`;
 }
 
 function tocHtml() {
@@ -810,31 +876,44 @@ function tocHtml() {
 }
 
 function logHtml() {
+  /* Two columns of 26 rather than four of 13: the list then fills the page
+     instead of stopping halfway down it, and the longer 한자 titles
+     (三點透視) get room. */
+  const COLS = 2, PER = 26, CW = 456, ROW = 33;
   let html = '';
-  const cols = 4, cw = 228, rowH = 34;
   drillPages.forEach((p, i) => {
-    const c = Math.floor(i / 13), r = i % 13;
-    const x = c * cw, y = r * rowH;
-    html += `<a class="logrow" href="#${aid(p.id)}" style="left:${x}px;top:${y}px">`
+    const c = Math.floor(i / PER), r = i % PER;
+    html += `<a class="logrow" href="#${aid(p.id)}" style="left:${c * CW}px;top:${r * ROW}px">`
       + `<span style="display:inline-block;width:19px;height:19px;border:1px solid var(--hair);`
-      + `vertical-align:-4px;margin-right:11px"></span>`
+      + `vertical-align:-4px;margin-right:13px"></span>`
       + `<span style="color:var(--guide)">${String(p.drill).padStart(2, '0')}</span>`
-      + `&nbsp;&nbsp;<span style="color:var(--ink)">${p.han}</span></a>`;
+      + `&nbsp;&nbsp;<span style="color:var(--ink)">${p.han}</span>`
+      + `<span style="color:var(--guide)">&nbsp;&nbsp;&middot;&nbsp;${p.folio}</span></a>`;
   });
-  html += `<div style="position:absolute;left:0;top:${13 * rowH + 40}px;width:912px;height:1px;background:var(--hair)"></div>`;
-  html += `<div style="position:absolute;left:0;top:${13 * rowH + 66}px;font-size:14px;font-weight:500;color:var(--muted)">`
+  void COLS;
+  const end = PER * ROW;
+  html += `<div style="position:absolute;left:0;top:${end + 40}px;width:912px;height:1px;background:var(--hair)"></div>`
+    + `<div style="position:absolute;left:0;top:${end + 66}px;font-size:14px;font-weight:500;color:var(--muted)">`
     + `Tick a box when a drill feels steady &mdash; not when you finish it once.</div>`;
   return html;
 }
 
 function baHtml() {
-  const pair = (y, label, a, b) =>
-    `<div class="lab" style="left:0;top:${y}px">${label}</div>`
-    + `<div class="lab" style="left:466px;top:${y}px">AFTER</div>`
-    + K.svg(912, 360, K.rect(0, 22, 440, 330, { c: 'var(--hair)' })
-      + K.rect(466, 22, 440, 330, { c: 'var(--hair)' }))
-      .replace('<svg', `<svg style="position:absolute;left:0;top:${y}px"`);
-  return pair(0, 'BEFORE · DRILL 06', 0, 0) + pair(480, 'BEFORE · DRILL 36', 0, 0);
+  /* Two equal fields per row, the pair spanning the full body width, and the
+     whole block centred vertically — it used to sit 22px from the top and
+     122px from the bottom. */
+  const GUT = 32, BW = (W - GUT) / 2, LAB = 22, GAP = 80;
+  const BH = Math.floor((H - GAP - 2 * LAB) / 2);
+  const top = Math.round((H - (2 * (LAB + BH) + GAP)) / 2);
+  const pair = (i, label) => {
+    const y = top + i * (LAB + BH + GAP);
+    return `<div class="lab" style="left:0;top:${y}px">${label}</div>`
+      + `<div class="lab" style="left:${BW + GUT}px;top:${y}px">AFTER</div>`
+      + K.svg(W, LAB + BH, K.rect(0, LAB, BW, BH, { c: 'var(--hair)' })
+        + K.rect(BW + GUT, LAB, BW, BH, { c: 'var(--hair)' }))
+        .replace('<svg', `<svg style="position:absolute;left:0;top:${y}px"`);
+  };
+  return pair(0, 'BEFORE &middot; DRILL 06') + pair(1, 'BEFORE &middot; DRILL 36');
 }
 
 /* ============================================================
@@ -903,9 +982,11 @@ const tocLinks  = (tocHtml().match(/href="#/g) || []).length;
 const logLinks  = (logHtml().match(/href="#/g) || []).length;
 const links     = (html.match(/href="#/g) || []).length;
 console.log(`Built ${pages.length} pages \u00b7 ${drillNo} drills \u2192 export/inae/inae-practice.html`);
+const partLinks = links - tabLinks - tocLinks - logLinks;
 console.log(`Links ${links} = tabs ${tabLinks} (7 \u00d7 ${pages.length - 1} \u2014 the cover carries no nav, per Figma 881:1724)`);
 console.log(`            + contents ${tocLinks} (52 drills + 3 free + 2 record)`);
 console.log(`            + drill log ${logLinks}`);
+console.log(`            + how-to part list ${partLinks}`);
 if (!texture) console.log('\u26a0  assets/inae/hanji-1080x1440.png missing \u2014 flat paper. Run: node tools/inae-texture.mjs');
 if (cellTable) { writeFileSync(process.env.INAE_AUDIT, JSON.stringify(cellTable));
   console.log(`Audit: wrote ${cellTable.length} cell rects \u2192 ${process.env.INAE_AUDIT}`); }

@@ -184,9 +184,10 @@ export function dotGrid(w, h, pitch = 24, r = 1.1) {
   return `<path d="${d}" fill="var(--guide-l)"/>`;
 }
 
-/** 3:4 thumbnail frames in a grid (b03, s04, s05). */
-export function frames(w, cols, rows, { gap = 28, thirds = false } = {}) {
-  const fw = (w - gap * (cols - 1)) / cols, fh = fw * 4 / 3;
+/** Thumbnail frames in a grid. `ratio` is height/width — 4/3 portrait by
+    default, pass 3/4 for landscape crops of a landscape scene (s06). */
+export function frames(w, cols, rows, { gap = 28, thirds = false, ratio = 4 / 3 } = {}) {
+  const fw = (w - gap * (cols - 1)) / cols, fh = fw * ratio;
   let s = '';
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     const x = c * (fw + gap), y = r * (fh + gap);

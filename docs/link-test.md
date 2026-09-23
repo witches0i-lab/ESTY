@@ -90,8 +90,8 @@ node tools/drawingbook.mjs   # 3. re-emit; prints any glyph outside the subset
 - **目次 (x03)** → all 57 entries: 52 drills + 3 free templates + 2 record pages.
 - **Drill log (r01)** → each of the 52 checkboxes → that drill.
 
-Expected: **60 pages**, **522 link annotations** = 413 tabs (7 × 59) + 57 contents
-+ 52 drill log.
+Expected: **60 pages**, **528 link annotations** = 413 tabs (7 × 59) + 57 contents
++ 52 drill log + 6 part links on the how-to page.
 
 ```bash
 node -e "const d=require('fs').readFileSync('export/inae/inae-practice.pdf').toString('latin1');\
@@ -120,8 +120,12 @@ console.log([...new Set((d.match(/\/BaseFont\s*\/([A-Za-z0-9+-]+)/g)||[]).map(x=
 
 ## Cell centring (layout A)
 `npm run inae-audit` renders the book and measures, in pixels, where the ink
-actually lands inside all 188 drill cells. It reports anything off-centre by
-more than 5px, or art crowding the cell frame that was not meant to fill it.
+actually lands. It covers all 229 framed areas: every layout-A cell, the
+how-to page's demo pair, and every layout-B band and field. Layout-A cells are
+checked for centring (5px) and for crowding a frame they were not meant to
+fill; bands and fields are checked for ink escaping past the top or bottom
+edge — a ground line running to both side edges is normal, a shape poking out
+of the band is not.
 
 Pixels, not SVG geometry: `getBBox()` reports geometry *before* clipping, so a
 hatch drawn long and clipped to its box measures as if it escaped the cell, and
@@ -131,6 +135,8 @@ source. Two pages are off-centre on purpose and are declared in the tool:
 where the cone's axis is, so a cone drawn on it lands centred).
 
 - [ ] `npm run inae-audit` exits clean.
+- [ ] Non-drill pages (cover, how-to, contents, drill log, before/after) fill
+      the body box — none of them is audited for centring, so check by eye.
 
 ## Visual / print
 - [ ] Every page exactly **1080×1440**, no margins, no workspace chrome.
