@@ -46,10 +46,14 @@ const W = 912, H = 954;            // body box (§3.3)
    ============================================================ */
 const SECTIONS = [
   { key: 'toc', tab: '目次', first: 'x03' },
-  { key: 'l',   tab: '線',   first: 'l01', label: 'LINE',   mark: '一 線'   },
-  { key: 'm',   tab: '墨',   first: 'm01', label: 'INK',    mark: '二 墨'   },
-  { key: 's',   tab: '餘白', first: 's01', label: 'SPACE',  mark: '三 餘白' },
-  { key: 'f',   tab: '形',   first: 'f01', label: 'FORM',   mark: '四 形'   },
+  { key: 'l',   tab: '線',   first: 'tl',  label: 'LINE',   mark: '一 線',
+    blurb: 'Twelve drills on the stroke itself \u2014 straight, curved, weighted.' },
+  { key: 'm',   tab: '墨',   first: 'tm',  label: 'INK',    mark: '二 墨',
+    blurb: 'Twelve drills on value: hatching, stippling, and the forms they describe.' },
+  { key: 's',   tab: '餘白', first: 'ts',  label: 'SPACE',  mark: '三 餘白',
+    blurb: 'Eight drills on what you choose to leave empty.' },
+  { key: 'f',   tab: '形',   first: 'tf',  label: 'FORM',   mark: '四 形',
+    blurb: 'Twenty drills on perspective and solid form.' },
   { key: 'b',   tab: '自由', first: 'b01', label: 'FREE',   mark: '五 自由' },
   { key: 'r',   tab: '記錄', first: 'r01', label: 'RECORD', mark: '記錄'    },
 ];
@@ -390,6 +394,11 @@ const FORM = [
     layout:'B', bandH:300,
     band:(w,h)=>bandCorridor(w,h),
     field:(w,h)=>corridor(w,h) }],
+  /* Figma comp 878:17049 titles this one 'Two-point perspective'. Kept the
+     spec's 'Two-point box': f04–f07 are a series (box / stacked boxes /
+     block building / above and below) and the 二點透視 already says
+     two-point perspective, so the comp's title duplicates it and breaks the
+     series. The comp predates the page map — update it on the design track. */
   ['f04','二點透視','Two-point box','Trace the guides. Then draw the same box with the guides ignored.','15–25', {
     layout:'B', bandH:300,
     band:(w,h)=>band2(w,h,[{x:w*0.5,y0:h*0.46,y1:h*0.88,l:168,r:168}]),
@@ -944,10 +953,14 @@ const howto = push({ id: 'x02', key: 'toc', metaL: 'HOW TO USE',
   instr: 'Every drill page works the same way.' });
 const toc = push({ id: 'x03', key: 'toc', metaL: 'CONTENTS', title: T('目次', 'Contents') });
 
-/* --- 52 drills --- */
-const drillPages = drills.map(([key, id, han, latin, instr, time, art]) =>
-  push({ id, key, drill: ++drillNo, han, latin, time,
+/* --- 52 drills, each 部 opened by a divider --- */
+const drillPages = [];
+let lastKey = null;
+for (const [key, id, han, latin, instr, time, art] of drills) {
+  if (key !== lastKey) { push({ id: `t${key}`, key, divider: true }); lastKey = key; }
+  drillPages.push(push({ id, key, drill: ++drillNo, han, latin, time,
     title: T(han, latin), instr, ...art }));
+}
 
 /* --- 五 自由 --- */
 push({ id: 'b01', key: 'b', metaL: 'FREE · BLANK', time: '15–25',
@@ -990,10 +1003,32 @@ function coverHtml() {
 <div style="position:absolute;left:140px;top:1080px;font-family:var(--han);font-size:17px;
   color:var(--muted)">매일 20분, 선과 여백의 기초</div>
 <div style="position:absolute;left:140px;top:1282px;font-size:12px;font-weight:500;
-  letter-spacing:.08em;color:var(--muted);font-family:var(--meta)">60 PAGES · 52 DRILLS · UNDATED</div>
+  letter-spacing:.08em;color:var(--muted);font-family:var(--meta)">${pages.length} PAGES · ${drillNo} DRILLS · UNDATED</div>
 <div style="position:absolute;right:140px;top:1282px;font-size:12px;font-weight:500;
   letter-spacing:.08em;color:var(--muted);font-family:var(--meta)">GOODNOTES · NOTABILITY</div>
 </div>`;
+}
+
+/* Section divider: the 部 mark at display size, what the part covers, and
+   where it runs. No meta row or title — the page IS the title. */
+function dividerHtml(p) {
+  const sec0 = sec(p.key);
+  const list = pages.filter((q) => q.key === p.key && q.drill);
+  const first = list[0], last = list.at(-1);
+  const C = (y, size, font, color, text, extra = '') =>
+    `<div style="position:absolute;left:0;top:${y}px;width:912px;text-align:center;`
+    + `font-family:${font};font-size:${size}px;color:${color};${extra}">${text}</div>`;
+  return C(240, 150, 'var(--han)', 'var(--ink)', sec0.tab, 'line-height:1')
+    + `<div style="position:absolute;left:376px;top:456px;width:160px;height:1px;background:var(--guide)"></div>`
+    + C(492, 14, 'var(--meta-mix)', 'var(--muted)',   // mark is 한자 — latin-only stack would fall back
+        `${sec0.mark}&nbsp;&nbsp;&middot;&nbsp;&nbsp;${sec0.label}`,
+        'font-weight:500;letter-spacing:.18em;text-transform:uppercase')
+    + C(542, 21, 'var(--display)', 'var(--ink)', sec0.blurb, 'font-weight:300;line-height:1.6')
+    + C(650, 12.5, 'var(--meta)', 'var(--guide)',
+        `DRILL ${String(first.drill).padStart(2, '0')}\u2013${String(last.drill).padStart(2, '0')}`
+        + `&nbsp;&nbsp;&middot;&nbsp;&nbsp;${list.length} DRILLS`
+        + `&nbsp;&nbsp;&middot;&nbsp;&nbsp;p.&nbsp;${first.folio}\u2013${last.folio}`,
+        'font-weight:500;letter-spacing:.12em');
 }
 
 function howtoHtml() {
@@ -1061,7 +1096,8 @@ function tocHtml() {
   const HEAD = 30, ROW = 24, GAP = 14, COLX = [0, 470];
   const blocks = SECTIONS.slice(1).map((s) => {
     const list = pages.filter((p) => p.key === s.key && p.title);
-    return { mark: s.mark, list, h: HEAD + list.length * ROW };
+    return { mark: s.mark, list, first: s.first.startsWith('t') ? s.first : null,
+             h: HEAD + list.length * ROW };
   });
 
   const cols = [[], []];
@@ -1078,7 +1114,9 @@ function tocHtml() {
   cols.forEach((col, i) => {
     let y = 0;
     for (const b of col) {
-      html += `<div class="tocsec" style="left:${COLX[i]}px;top:${y}px">${b.mark}</div>`;
+      html += b.first
+        ? `<a class="tocsec" href="#${aid(b.first)}" style="left:${COLX[i]}px;top:${y}px">${b.mark}</a>`
+        : `<div class="tocsec" style="left:${COLX[i]}px;top:${y}px">${b.mark}</div>`;
       y += HEAD;
       for (const p of b.list) {
         const no = p.drill ? String(p.drill).padStart(2, '0') : '\u2014';
@@ -1140,6 +1178,7 @@ function baHtml() {
    RENDER
    ============================================================ */
 const bodyFor = (p) => {
+  if (p.divider) return dividerHtml(p);
   if (p.id === 'x02') return howtoHtml();
   if (p.id === 'x03') return tocHtml();
   if (p.id === 'r01') return logHtml();
@@ -1204,7 +1243,7 @@ const links     = (html.match(/href="#/g) || []).length;
 console.log(`Built ${pages.length} pages \u00b7 ${drillNo} drills \u2192 export/inae/inae-practice.html`);
 const partLinks = links - tabLinks - tocLinks - logLinks;
 console.log(`Links ${links} = tabs ${tabLinks} (7 \u00d7 ${pages.length - 1} \u2014 the cover carries no nav, per Figma 881:1724)`);
-console.log(`            + contents ${tocLinks} (52 drills + 3 free + 2 record)`);
+console.log(`            + contents ${tocLinks} (52 drills + 3 free + 2 record + 4 part openers)`);
 console.log(`            + drill log ${logLinks}`);
 console.log(`            + how-to part list ${partLinks}`);
 if (!texture) console.log('\u26a0  assets/inae/hanji-1080x1440.png missing \u2014 flat paper. Run: node tools/inae-texture.mjs');

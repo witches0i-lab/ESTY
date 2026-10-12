@@ -85,13 +85,17 @@ node tools/drawingbook.mjs   # 3. re-emit; prints any glyph outside the subset
 `assets/inae/fonts.css` is committed so the normal build stays offline.
 
 ## Link map
-- **Top tabs** (7: 目次 線 墨 餘白 形 自由 記錄) → the first page of each section,
+- **Top tabs** (7: 目次 線 墨 餘白 形 自由 記錄) → each section's divider (or its first page
+  where there is none),
   from every page **except the cover**, which carries no nav (matches Figma 881:1724).
 - **目次 (x03)** → all 57 entries: 52 drills + 3 free templates + 2 record pages.
 - **Drill log (r01)** → each of the 52 checkboxes → that drill.
 
-Expected: **60 pages**, **528 link annotations** = 413 tabs (7 × 59) + 57 contents
-+ 52 drill log + 6 part links on the how-to page.
+Expected: **64 pages**, **560 link annotations** = 441 tabs (7 × 63) + 61 contents
+(57 entries + 4 part openers) + 52 drill log + 6 part links on the how-to page.
+
+The four section dividers (`p-tl` `p-tm` `p-ts` `p-tf`) open 線·墨·餘白·形. The top
+tabs and the contents' 部 headings land on the divider, not on drill one.
 
 ```bash
 node -e "const d=require('fs').readFileSync('export/inae/inae-practice.pdf').toString('latin1');\

@@ -113,7 +113,7 @@ pinned to 29 so the same file works in leap years) — this constant is duplicat
 ## ── INAE (이내) — 별개 제품 라인 ──
 - **제품 라인이지 GOYO 테마가 아니다.** 착수 결정 2026-09-21 (Jude), Notion 마스터 허브
   「🆕 신규 착수 상태」에 기록. GOYO 컬러웨이(najeon/light/hanji)와 같은 층위가 아니다.
-- **첫 제품: INAE Practice — 디지털 드로잉 연습북.** 60p · 드릴 52장 · iPad
+- **첫 제품: INAE Practice — 디지털 드로잉 연습북.** 64p · 드릴 52장 · iPad
   (GoodNotes/Notability) 하이퍼링크 PDF · $7–9. 손그림 없이 전 페이지 벡터/코드 생성.
 - **스펙 원본 = `docs/drawingbook-spec.md` (v0.2).** 페이지 맵·그리드·토큰·타이포·지시 문법이
   전부 거기 있다. **INAE 작업 전 반드시 먼저 읽을 것.** 이 블록은 그 요약이 아니라 배선 메모다.
@@ -156,6 +156,9 @@ pinned to 29 so the same file works in leap years) — this constant is duplicat
   전면 RGB 래스터 1장을 문서에 1회만 임베드해 60페이지가 공유. **blend mode로 바꾸지 말 것**
   — 중첩 투명 그룹은 일부 PDF 뷰어가 검게 합성한다(GOYO pine 레이어와 같은 함정).
 - **PDF:** `node tools/pdf.mjs inae` 로 이 타깃만 렌더 가능(라벨 필터). 전체는 405p × 3이라 느리다.
+- **섹션 간지 4장** (`p-tl` `p-tm` `p-ts` `p-tf`) — 線·墨·餘白·形 각 部 앞. 탭과 目次의
+  部 제목이 드릴 1번이 아니라 **간지로** 간다. 표지 메타는 `pages.length`/`drillNo`로
+  자동 생성되니 손으로 적지 말 것. 自由·記錄는 간지 없음(드릴 섹션이 아니라서).
 - **페이지 품질은 눈이 아니라 `npm run inae-audit`으로 본다.** 243개 프레임(레이아웃 A 칸 전부 +
   x02 데모 + 레이아웃 B의 band·field)을 픽셀로 재서 ① 5px 넘게 벗어난 중앙정렬
   ② band/field를 **위아래로 뚫고 나간 잉크** ③ **EXAMPLE에 완성된 `--ink` 획이 없는 드릴**
@@ -165,14 +168,18 @@ pinned to 29 so the same file works in leap years) — this constant is duplicat
   형태 프리미티브는 **자기 bbox로 스스로 중앙정렬**한다(`boxPoints`·`coneAxis{fit}`·
   `section`·`scribble`) — 손으로 맞춘 상수를 새로 넣지 말 것.
 - **QA:** 스펙 §7 체크리스트 + `docs/link-test.md` 하단 INAE 섹션.
-  현재 기준값: **60페이지 · 링크 528개**(탭 413 + 目次 57 + 드릴로그 52 + x02 五部 6) · 폴백 서체 0건.
+  현재 기준값: **64페이지 · 링크 560개**(탭 441 + 目次 61 + 드릴로그 52 + x02 五部 6) · 폴백 서체 0건.
 - **수정 지시서 `docs/drawingbook-fix-v0.3.md`** — 60페이지 전수 검수 결과. P0/P1 반영 완료
   (2026-10-12): 가이드 대비 상향(R3), 全 드릴 EXAMPLE에 완성 획, 투시 10장에 완성 박스,
-  餘白 3장에 작업된 예시, 감사에 내용 검사 추가(R4). **P2는 미착수 — Jude 확인 필요:**
-  섹션 간지 추가 여부(넣으면 64p, 표지 메타 `60 PAGES`와 링크 기준값도 바뀜).
-- **상태: v0.3 반영 완료 (2026-10-12).** 60p·52드릴·링크 528·폴백 서체 0·감사 통과.
-  남은 것은 스펙 §8 미결(표지 모티프·낙관·키워드 검증) + f04 제목
-  (Figma `Two-point perspective` vs 스펙 `Two-point box`) 확정 + P2 간지 결정.
+  餘白 3장에 작업된 예시, 감사에 내용 검사 추가(R4), **P2 간지 4장 추가(Jude 승인)**.
+- **f04 제목은 스펙의 `Two-point box`로 확정 (2026-10-12).** Figma comp `878:17049`는
+  `Two-point perspective`인데, f04–f07이 한 시리즈(box / stacked boxes / block building /
+  above and below)이고 한자 二點透視가 이미 "two-point perspective"를 말하므로 comp 제목은
+  중복이고 시리즈를 깬다. comp가 페이지 맵보다 먼저 만들어진 것 — **Figma 쪽을 코드에 맞춰
+  고칠 것**(디자인 트랙 과제).
+- **상태: v0.3 전체 반영 완료 (2026-10-12).** 64p·52드릴·링크 560·폴백 서체 0·감사 통과.
+  남은 것은 스펙 §8 미결뿐 — 표지 모티프(日 vs 산·안개) · 낙관 마크 · Etsy 키워드 검증.
+  셋 다 Figma/Notion 쪽 결정이라 코드 트랙에서 끝낼 수 없다.
 
 ## ── Adding a new theme later ──
 - Duplicate the GOYO theme-specific section, rename, and fill in that theme's specifics.
