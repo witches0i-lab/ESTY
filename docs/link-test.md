@@ -59,3 +59,94 @@ Three colourways, two files each — najeon is the base; light & hanji change on
 the colourway tokens (layout, anchors and text positions are identical):
 `export/najeon/`, `export/light/`, `export/hanji/` → `goyo-<theme>.pdf` + `goyo-guide-<theme>.pdf`
 (e.g. `goyo-najeon.pdf`, `goyo-guide-najeon.pdf`).
+
+---
+
+# INAE Practice — Hyperlink test checklist
+
+Separate product line, separate file. Spec: `docs/drawingbook-spec.md` §7.
+
+```bash
+npm run drawingbook          # → export/inae/inae-practice.html
+node tools/pdf.mjs inae      # → export/inae/inae-practice.pdf (only this target)
+```
+
+The typefaces are **subset to a closed glyph inventory** (the book's copy is
+fixed at build time — the reader draws, never types). If the copy changes,
+re-bake them, which needs network:
+
+```bash
+node tools/drawingbook.mjs   # 1. emit pages
+node tools/inae-fonts.mjs    # 2. re-subset to what those pages use
+node tools/drawingbook.mjs   # 3. re-emit; prints any glyph outside the subset
+```
+
+`npm run build` deliberately does **not** call `inae-fonts.mjs` — the baked
+`assets/inae/fonts.css` is committed so the normal build stays offline.
+
+## Link map
+- **Top tabs** (7: 目次 線 墨 餘白 形 自由 記錄) → the first page of each section,
+  from every page **except the cover**, which carries no nav (matches Figma 881:1724).
+- **目次 (x03)** → all 57 entries: 52 drills + 3 free templates + 2 record pages.
+- **Drill log (r01)** → each of the 52 checkboxes → that drill.
+
+Expected: **60 pages**, **528 link annotations** = 413 tabs (7 × 59) + 57 contents
++ 52 drill log + 6 part links on the how-to page.
+
+```bash
+node -e "const d=require('fs').readFileSync('export/inae/inae-practice.pdf').toString('latin1');\
+console.log('pages:',(d.match(/\/Type\s*\/Page[^s]/g)||[]).length,\
+'links:',(d.match(/\/Subtype\s*\/Link/g)||[]).length)"
+```
+
+## Typeface check (spec §7)
+Only the three INAE faces may appear; any system fallback means a glyph escaped
+the subset or a CJK run landed in a latin-only stack.
+
+```bash
+node -e "const d=require('fs').readFileSync('export/inae/inae-practice.pdf').toString('latin1');\
+console.log([...new Set((d.match(/\/BaseFont\s*\/([A-Za-z0-9+-]+)/g)||[]).map(x=>x.split('/').pop()))].join('\n'))"
+# expect exactly: Inter-Medium, NotoSerifKR-Regular, Newsreader-Light
+# and zero of: Cormorant, Courier, DejaVu, Liberation, WenQuanYi
+```
+
+## In GoodNotes / Notability
+1. Import `inae-practice.pdf` as a document, reading/hand mode.
+2. Tap each of the 7 tabs → lands on that section's first page.
+3. On 目次, tap entries from each 部 → the right drill, folio matches.
+4. On the drill log, tap several numbers → the matching drill.
+5. Confirm the **cover** has no tap targets.
+6. Draw on a drill, follow a link, come back — ink persists.
+
+## Cell centring (layout A)
+`npm run inae-audit` renders the book and measures, in pixels, where the ink
+actually lands. It covers all 243 framed areas: every layout-A cell, the
+how-to page's demo pair, and every layout-B band and field. Layout-A cells are
+checked for centring (5px) and for crowding a frame they were not meant to
+fill; bands and fields are checked for ink escaping past the top or bottom
+edge — a ground line running to both side edges is normal, a shape poking out
+of the band is not.
+
+It also checks content (fix spec v0.3 R4): every drill's EXAMPLE must contain
+a finished `--ink` stroke, only `f20` and `b01`–`b03` may have no EXAMPLE at
+all, and a YOURS field's guides must reach 70% of its height. `m10` and `f20`
+are declared open below their guides — shadows need the room, and 綜合 is a
+blank sheet by design.
+
+Pixels, not SVG geometry: `getBBox()` reports geometry *before* clipping, so a
+hatch drawn long and clipped to its box measures as if it escaped the cell, and
+masked shading measures as the whole cell. The rendered page is the only honest
+source. Two pages are off-centre on purpose and are declared in the tool:
+`s07` (balancing the given mass IS the drill) and `f13`'s YOURS axis (placed
+where the cone's axis is, so a cone drawn on it lands centred).
+
+- [ ] `npm run inae-audit` exits clean.
+- [ ] Non-drill pages (cover, how-to, contents, drill log, before/after) fill
+      the body box — none of them is audited for centring, so check by eye.
+
+## Visual / print
+- [ ] Every page exactly **1080×1440**, no margins, no workspace chrome.
+- [ ] Paper texture present on all 60 pages (one shared raster, embedded once).
+- [ ] Meta row DRILL numbers match spec §5; folios run 1–60 unbroken.
+- [ ] No 目次 section straddles the two-column break.
+- [ ] **No year, weekday or date printed anywhere** (undated invariant).
