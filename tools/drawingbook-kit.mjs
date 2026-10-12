@@ -88,13 +88,17 @@ export const rect = (x, y, w, h, { c = 'var(--hair)', sw = 1, fill = 'none' } = 
 export const ellipse = (cx, cy, rx, ry, { c = 'var(--ink)', w = 1.6, fill = 'none' } = {}) =>
   `<ellipse cx="${n(cx)}" cy="${n(cy)}" rx="${n(rx)}" ry="${n(ry)}" fill="${fill}" stroke="${c}" stroke-width="${w}"/>`;
 
-/** Rows of dot pairs to be joined in one stroke (線 drills l01/l02/l06). */
-export function dotPairs({ rows, len, pitch, x = 0, y = 0, vertical = false }) {
+/** Rows of dot pairs to be joined in one stroke (線 drills l01/l02/l06).
+    `drawn` joins the first N pairs with an ink stroke — an EXAMPLE band that
+    shows only dots demonstrates nothing (fix spec v0.3 R1). */
+export function dotPairs({ rows, len, pitch, x = 0, y = 0, vertical = false, drawn = 0, r = 4.6 }) {
   let s = '';
   for (let i = 0; i < rows; i++) {
     const o = i * pitch;
-    s += vertical ? dot(x + o, y) + dot(x + o, y + len)
-                  : dot(x, y + o) + dot(x + len, y + o);
+    const A = vertical ? [x + o, y] : [x, y + o];
+    const B = vertical ? [x + o, y + len] : [x + len, y + o];
+    if (i < drawn) s += line(A[0], A[1], B[0], B[1], { c: 'var(--ink)', w: 1.6 });
+    s += dot(A[0], A[1], r) + dot(B[0], B[1], r);
   }
   return s;
 }
@@ -354,4 +358,79 @@ export function sphereContours(cx, cy, r, tilt = 0, { filled = true, lats = 4, l
   if (lon) g.push(`<ellipse cx="${cx}" cy="${cy}" rx="${(r * 0.36).toFixed(1)}" ry="${r}" `
     + `fill="none" stroke="var(--guide)" stroke-width="1"/>`);
   return s + `<g transform="rotate(${tilt} ${cx} ${cy})">${g.join('')}</g>`;
+}
+
+/* ============================================================
+   PERSPECTIVE SOLIDS  (fix spec v0.3 §2 — 四 形)
+   The perspective drills have to SHOW a finished box, not just the rays that
+   would produce one. These build real boxes from their vanishing points:
+   every corner is an actual intersection, so the demo is correct by
+   construction rather than drawn to look about right.
+
+   Rendering rule from the spec: visible edges --ink 1.6, hidden edges --ink 1
+   dashed, construction --guide-l.
+   ============================================================ */
+
+/** Intersection of line AB with line CD (null when parallel). */
+export function isect(A, B, C, D) {
+  const a1 = B[1] - A[1], b1 = A[0] - B[0], c1 = a1 * A[0] + b1 * A[1];
+  const a2 = D[1] - C[1], b2 = C[0] - D[0], c2 = a2 * C[0] + b2 * C[1];
+  const det = a1 * b2 - a2 * b1;
+  return det ? [(b2 * c1 - b1 * c2) / det, (a1 * c2 - a2 * c1) / det] : null;
+}
+/** The point on line AB at a given x. */
+export const atX = (A, B, x) => [x, A[1] + ((B[1] - A[1]) * (x - A[0])) / (B[0] - A[0])];
+const lerp = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
+
+const SOLID = { c: 'var(--ink)', w: 1.6 };
+const HIDDEN = { c: 'var(--ink)', w: 1, dash: '5 5' };
+const seg = (A, B, vis) => line(A[0], A[1], B[0], B[1], vis ? SOLID : HIDDEN);
+
+/** One-point box: a front rectangle pushed back toward `vp`. */
+export function persBox1(vp, [x, y, w, h], t = 0.42) {
+  const f = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+  const b = f.map((p) => lerp(p, vp, t));
+  // the corner nearest the vanishing point is the one the front face hides
+  let hid = 0;
+  f.forEach((p, i) => { if (Math.hypot(p[0] - vp[0], p[1] - vp[1])
+    < Math.hypot(f[hid][0] - vp[0], f[hid][1] - vp[1])) hid = i; });
+  let s = '';
+  for (let i = 0; i < 4; i++) s += seg(f[i], f[(i + 1) % 4], true);
+  for (let i = 0; i < 4; i++) s += seg(f[i], b[i], i !== hid);
+  for (let i = 0; i < 4; i++) s += seg(b[i], b[(i + 1) % 4], i !== hid && (i + 1) % 4 !== hid);
+  return s;
+}
+
+/** Two-point box from a vertical front edge at `x`, spanning y0..y1. */
+export function persBox2(vpL, vpR, x, y0, y1, xl, xr, hy) {
+  const F0 = [x, y0], F1 = [x, y1];
+  const TL = atX(vpL, F0, xl), BL = atX(vpL, F1, xl);
+  const TR = atX(vpR, F0, xr), BR = atX(vpR, F1, xr);
+  const BT = isect(vpL, TR, vpR, TL), BB = isect(vpL, BR, vpR, BL);
+  if (!BT || !BB) return '';
+  // we see the top when the box sits below the horizon, the underside above it
+  const topVis = y0 > hy, botVis = y1 < hy;
+  return seg(F0, F1, true) + seg(TL, BL, true) + seg(TR, BR, true)
+    + seg(TL, F0, true) + seg(F0, TR, true)
+    + seg(BL, F1, true) + seg(F1, BR, true)
+    + seg(TL, BT, topVis) + seg(TR, BT, topVis)
+    + seg(BL, BB, botVis) + seg(BR, BB, botVis)
+    + seg(BT, BB, false);
+}
+
+/** Three-point box: the verticals converge on `vpV` as well. */
+export function persBox3(vpL, vpR, vpV, F0, F1, PL, PR) {
+  const TL = isect(vpL, F0, vpV, PL), BL = isect(vpL, F1, vpV, PL);
+  const TR = isect(vpR, F0, vpV, PR), BR = isect(vpR, F1, vpV, PR);
+  if (!TL || !BL || !TR || !BR) return '';
+  const BT = isect(vpL, TR, vpR, TL), BB = isect(vpL, BR, vpR, BL);
+  if (!BT || !BB) return '';
+  // looking up: the underside shows. looking down: the top shows.
+  const up = vpV[1] < F0[1];
+  return seg(F0, F1, true) + seg(TL, BL, true) + seg(TR, BR, true)
+    + seg(TL, F0, true) + seg(F0, TR, true)
+    + seg(BL, F1, true) + seg(F1, BR, true)
+    + seg(TL, BT, !up) + seg(TR, BT, !up)
+    + seg(BL, BB, up) + seg(BR, BB, up)
+    + seg(BT, BB, false);
 }

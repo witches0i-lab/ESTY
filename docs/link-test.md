@@ -120,12 +120,18 @@ console.log([...new Set((d.match(/\/BaseFont\s*\/([A-Za-z0-9+-]+)/g)||[]).map(x=
 
 ## Cell centring (layout A)
 `npm run inae-audit` renders the book and measures, in pixels, where the ink
-actually lands. It covers all 229 framed areas: every layout-A cell, the
+actually lands. It covers all 243 framed areas: every layout-A cell, the
 how-to page's demo pair, and every layout-B band and field. Layout-A cells are
 checked for centring (5px) and for crowding a frame they were not meant to
 fill; bands and fields are checked for ink escaping past the top or bottom
 edge — a ground line running to both side edges is normal, a shape poking out
 of the band is not.
+
+It also checks content (fix spec v0.3 R4): every drill's EXAMPLE must contain
+a finished `--ink` stroke, only `f20` and `b01`–`b03` may have no EXAMPLE at
+all, and a YOURS field's guides must reach 70% of its height. `m10` and `f20`
+are declared open below their guides — shadows need the room, and 綜合 is a
+blank sheet by design.
 
 Pixels, not SVG geometry: `getBBox()` reports geometry *before* clipping, so a
 hatch drawn long and clipped to its box measures as if it escaped the cell, and

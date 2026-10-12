@@ -12,8 +12,12 @@
   /* ---- palette (§3.2) --------------------------------------------------- */
   --paper:#F2EDE4;      /* background (texture base #F3EEE6)                 */
   --ink:#262322;        /* example strokes & fills, titles                   */
-  --guide:#B9AE9B;      /* drill guides                                      */
-  --guide-l:#D3C9B7;    /* faint guides                                      */
+  /* Contrast against --paper, measured: guide 2.46:1, guide-l 1.66:1.
+     The old pair (1.88 / 1.41) read as blank paper on an iPad and in shop
+     thumbnails. Capped at 2.5:1 so a guide never competes with the dark
+     stroke the reader puts on top of it. (fix spec v0.3 R3) */
+  --guide:#A39784;      /* drill guides                                      */
+  --guide-l:#C4B9A5;    /* faint guides                                      */
   --hair:#CFC5B2;       /* rules, YOURS boxes                                */
   --muted:#8C8172;      /* meta + instructions                               */
   --seal:#9C4A3A;       /* seal mark — reserved, undecided (§8)              */

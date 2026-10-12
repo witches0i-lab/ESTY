@@ -31,8 +31,19 @@ const EXPECTED = {
   'f13:Y': 'the YOURS axis is placed where the cone’s axis is, so a cone drawn '
     + 'on it lands centred; the bare axis is therefore not centred itself',
 };
+/* Fields deliberately left open below their guides, so the 70% rule does not
+   apply: 影 keeps its lower half clear for the shadows cast into it, and
+   綜合 is a blank sheet by design — its reference sits in the band. */
+const OPEN_FIELD = new Set(['m10', 'f20']);
 const TOL_CENTRE = 5;    // px
 const TOL_MARGIN = 6;    // px, only for art that is not meant to fill the cell
+/* fix spec v0.3 R4 — content checks, not just geometry:
+   an EXAMPLE that shows no finished stroke teaches nothing, and a YOURS field
+   with guides only along its top edge reads as a blank page. */
+const DRILL = /^[lmsf]\d\d$/;
+const BARE_OK = new Set(['f20', 'b01', 'b02', 'b03']);   // no EXAMPLE by design
+const INK_DARK = 120;    // clearly a --ink stroke, not a --guide
+const FIELD_FILL = 0.70; // guides must cover this much of the field's height
 /* Drills whose art fills the cell to its edges on purpose (value boxes,
    stippling, negative-space hatching, thumbnail frames). */
 const FILLS_CELL = new Set(['x02','m01','m02','m03','m04','m05','m07','m09','m12','s01','s02','s03','s04','s05','s08']);
@@ -100,6 +111,7 @@ for (const c of cells) (byPage[c.at.split(':')[0]] ||= []).push(c);
 
 const INK = 230, INSET = 2;   // paper is ~239 with sigma-2.1 grain
 const findings = [];
+const stats = {};
 for (const [pid, list] of Object.entries(byPage)) {
   const f = join(tmp, `${pid}.html`), png = join(tmp, `${pid}.png`);
   writeFileSync(f, head + '<body style="display:block;margin:0;padding:0">' + slice(pid) + '</body></html>');
@@ -113,7 +125,24 @@ for (const [pid, list] of Object.entries(byPage)) {
     return 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]; };
   // a lone dark pixel is paper grain, not a mark
   const ink = (x, y) => lum(x, y) < INK && (lum(x + 1, y) < INK || lum(x, y + 1) < INK);
+  const dark = (x, y) => lum(x, y) < INK_DARK;
   for (const cell of list) {
+    if (cell.mode === 'contain' || cell.at.endsWith(':E')) {
+      /* count finished strokes, and for a field how much of its height the
+         guides actually reach */
+      let darkN = 0, top = 1e9, bot = -1;
+      for (let y = cell.y + 2; y < cell.y + cell.h - 2; y++)
+        for (let x = cell.x + 2; x < cell.x + cell.w - 2; x++) {
+          if (dark(x, y)) darkN++;
+          if (ink(x, y)) { if (y < top) top = y; if (y > bot) bot = y; }
+        }
+      const page = cell.at.split(':')[0];
+      (stats[page] ||= { ink: 0, hasExample: false, field: null })
+        .ink += cell.at.endsWith(':field') ? 0 : darkN;
+      if (cell.at.endsWith(':band') || cell.at.endsWith(':E')) stats[page].hasExample = true;
+      if (cell.at.endsWith(':field') && bot > 0)
+        stats[page].field = { cover: (bot - top + 1) / cell.h, h: cell.h };
+    }
     if (cell.mode === 'contain') {
       /* Only the top and bottom edges are checked, and only outside the frame:
          a ground line running to both side edges is normal, art poking out of
@@ -148,10 +177,27 @@ for (const [pid, list] of Object.entries(byPage)) {
       findings.push(`${cell.at.padEnd(14)} crowds the frame  margin ${margin}px  (cell ${cell.w})`);
   }
 }
+/* ---- content findings (v0.3 R4) ---- */
+for (const [page, st] of Object.entries(stats)) {
+  if (!DRILL.test(page)) continue;
+  if (!st.hasExample) {
+    if (!BARE_OK.has(page)) findings.push(`${page.padEnd(14)} has no EXAMPLE area (only ${[...BARE_OK].join(', ')} may be bare)`);
+    continue;
+  }
+  if (st.ink === 0) findings.push(`${page.padEnd(14)} EXAMPLE shows no finished --ink stroke`);
+  if (st.field && !OPEN_FIELD.has(page) && st.field.cover < FIELD_FILL)
+    findings.push(`${page.padEnd(14)} YOURS guides cover only ${Math.round(st.field.cover * 100)}% of the field height (want ${FIELD_FILL * 100}%)`);
+}
+/* pages with no registered frame at all are bare drills */
+for (const p2 of new Set(cells.map((c) => c.at.split(':')[0])))
+  if (DRILL.test(p2) && !stats[p2] && !BARE_OK.has(p2))
+    findings.push(`${p2.padEnd(14)} has no EXAMPLE area`);
+
 rmSync(tmp, { recursive: true, force: true });
 
 console.log(`Centring audit: ${cells.length} cells measured.`);
 for (const [k, why] of Object.entries(EXPECTED)) console.log(`  skipped ${k} — ${why}`);
+for (const k of OPEN_FIELD) console.log(`  ${k} field is open below its guides on purpose (shadows)`);
 if (!findings.length) console.log(`\n✓ nothing off-centre by more than ${TOL_CENTRE}px.`);
 else { console.log(`\n⚠  ${findings.length} finding(s):`); for (const f of findings) console.log('   ' + f); }
 process.exit(findings.length ? 1 : 0);

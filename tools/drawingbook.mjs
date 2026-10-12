@@ -173,14 +173,17 @@ function layoutA(p) {
 
 const B_BAND = 200, B_GAP = 24;
 function layoutB(p) {
-  const fy = p.bare ? 0 : B_BAND + B_GAP;
+  /* Perspective demos need headroom: at 200px a box sits on the horizon and
+     foreshortens to a slab, so those drills ask for a taller band. */
+  const bandH = p.bandH || B_BAND;
+  const fy = p.bare ? 0 : bandH + B_GAP;
   const fh = H - fy;
   let svg = '', html = '';
   if (!p.bare) {
-    html += `<div class="lab" style="left:0;top:-18px">EXAMPLE</div>`
+    html += `<div class="lab" style="left:0;top:-18px">${p.bandLabel || 'EXAMPLE'}</div>`
           + `<div class="lab" style="left:0;top:${fy - 18}px">YOURS</div>`;
-    svg += `<g>${p.band ? p.band(W, B_BAND) : ''}</g>`;
-    registerBox(`${p.id}:band`, 0, 0, W, B_BAND);
+    svg += `<g>${p.band ? p.band(W, bandH) : ''}</g>`;
+    registerBox(`${p.id}:band`, 0, 0, W, bandH);
   }
   registerBox(`${p.id}:field`, 0, fy, W, fh);
   svg += `<g transform="translate(0 ${fy})">${p.field ? p.field(W, fh) : ''}</g>`;
@@ -196,29 +199,39 @@ const seeded = K.rng;
 
 const LINE = [
   ['l01','橫線','Horizontal lines','Connect each pair of dots in one stroke.','5–10', {
-    layout:'B', band:(w)=>K.dotPairs({rows:2,len:780,pitch:64,x:66,y:70}),
-    /* 12 rows at a 64px pitch is 704px of travel — centre it rather than
-       starting at a fixed offset, which ran the last row out of the field */
+    layout:'B',
+    /* one pair joined, one left open: the band has to show the result, not
+       just the dots (v0.3 R1) */
+    band:(w,h)=>K.dotPairs({rows:2,len:780,pitch:64,x:66,y:(h-64)/2,drawn:1}),
     field:(w,h)=>K.dotPairs({rows:12,len:780,pitch:64,x:66,y:(h-11*64)/2}) }],
   ['l02','縱線','Vertical lines','Top to bottom. Don&rsquo;t slow down at the end.','5–10', {
-    layout:'B', band:(w)=>K.dotPairs({rows:3,len:140,pitch:92,x:120,y:30,vertical:true}),
-    field:(w,h)=>K.dotPairs({rows:10,len:700,pitch:92,x:42,y:15,vertical:true}) }],
+    layout:'B',
+    band:(w,h)=>K.dotPairs({rows:3,len:150,pitch:92,x:(w-2*92)/2,y:(h-150)/2,vertical:true,drawn:2}),
+    field:(w,h)=>K.dotPairs({rows:10,len:700,pitch:92,x:(w-9*92)/2,y:(h-700)/2,vertical:true}) }],
   ['l03','斜線','Diagonals','Both directions. Keep the angle steady.','5–10', {
     layout:'B',
-    band:(w)=>diagPairs(w,B_BAND,2,45)+diagPairs(w,B_BAND,2,-30),
-    field:(w,h)=>diagPairs(w,h,8,45)+diagPairs(w,h,8,-30) }],
+    band:(w,h)=>diagPairs(w,h,{cols:2,rows:1,deg:45,len:120,drawn:1,height:h})
+      + `<g transform="translate(${w/2} 0)">`
+      + diagPairs(w/2,h,{cols:1,rows:1,deg:-30,len:120,drawn:1,height:h})+`</g>`,
+    /* eight pairs per angle spread over the whole field — three rows at the
+       top with the lower two thirds blank was the v0.3 R2 complaint */
+    field:(w,h)=>diagPairs(w,h,{cols:4,rows:2,deg:45,len:118,top:0,height:h/2})
+      + diagPairs(w,h,{cols:4,rows:2,deg:-30,len:118,top:h/2,height:h/2}) }],
   ['l04','連點','Connect the points','Join the numbered points in order.','10', {
-    layout:'B', bare:true, field:(w,h)=>numberedScatter(w,h,24,4204) }],
+    layout:'B',
+    band:(w,h)=>numberedScatter(w,h,7,99,{joined:true,pad:34}),
+    field:(w,h)=>numberedScatter(w,h,24,4204) }],
   ['l05','平行','Parallel lines','Add five lines beside the given one. Keep the gap even.','10', {
     layout:'A', rows:6,
     example:(i,c)=>K.line(10,c/2,c-10,c/2,{c:'var(--ink)',w:1.6}),
     yours:(i,c)=>K.line(10,c/2,c-10,c/2,{c:'var(--guide-l)',w:1.6}) }],
   ['l06','長線','Long lines','Edge to edge. Use your shoulder, not your wrist.','5–10', {
-    layout:'B', band:(w)=>K.dotPairs({rows:2,len:912,pitch:80,x:0,y:60}),
-    field:(w,h)=>K.dotPairs({rows:8,len:912,pitch:90,x:0,y:45}) }],
+    layout:'B',
+    band:(w,h)=>K.dotPairs({rows:2,len:912,pitch:80,x:0,y:(h-80)/2,drawn:1}),
+    field:(w,h)=>K.dotPairs({rows:8,len:912,pitch:90,x:0,y:(h-7*90)/2}) }],
   ['l07','弧','Arcs','Pass through all three points.','10', {
     layout:'B', band:(w,h)=>arcSets(w,h,3,1,true),
-    field:(w,h)=>arcSets(w,h,4,3,false) }],
+    field:(w,h)=>arcSets(w,h,4,4,false) }],
   ['l08','圓','Circles','One motion per circle. Do not correct.','10', {
     layout:'B',
     band:(w,h)=>K.rect(0,20,140,140,{c:'var(--guide-l)'})+K.ellipse(70,90,62,62),
@@ -230,8 +243,16 @@ const LINE = [
     yours:(i,c)=>{const r=[0.2,0.35,0.5,0.65,0.8][i],bh=c*0.8*r+20,by=(c-bh)/2;
       return K.rect(20,by,c-40,bh,{c:'var(--guide-l)'});} }],
   ['l10','螺旋','Spirals','From the center out. Keep the spacing even.','10', {
-    layout:'B', band:(w,h)=>K.spiral(110,100,4,22),
-    field:(w,h)=>[0,1,2,3].map((i)=>K.dot(140+i*210,h/2,2.6,'var(--guide)')).join('') }],
+    layout:'B', band:(w,h)=>K.spiral(w/2,h/2,4,22),
+    /* four centres with a faint outer circle each, one already started —
+       four bare dots on an empty field gave the reader nothing to aim at */
+    field:(w,h)=>{let s='';const cx=[w*0.25,w*0.75],cy=[h*0.28,h*0.72],r=Math.min(w,h)*0.17;
+      let k=0;
+      for(const y of cy)for(const x of cx){
+        s+=K.ellipse(x,y,r,r,{c:'var(--guide-l)',w:1})+K.dot(x,y,2.6,'var(--guide)');
+        if(k===0)s+=K.spiral(x,y,1.25,22);
+        k++;}
+      return s;} }],
   ['l11','輪郭','Contour','Trace the outline, then draw it again beside it.','15', {
     layout:'A', rows:3, rowLabels:['葉','壺','石'],
     example:(i,c)=>CONTOUR[i](c,'var(--ink)',1.6),
@@ -261,7 +282,9 @@ const INK = [
     field:(w,h)=>stepBarField(w,h,7) }],
   ['m06','漸層','Gradient','Light to dark without visible steps.','15', {
     layout:'B', band:(w,h)=>gradBar(w,120,'m06b'),
-    field:(w,h)=>K.rect(0,(h-120)/2,w,120,{c:'var(--guide-l)'}) }],
+    field:(w,h)=>{const n=4,bh=104,gap=(h-n*bh)/(n+1);let s='';
+      for(let i=0;i<n;i++)s+=K.rect(0,gap+i*(bh+gap),w,bh,{c:'var(--guide-l)'});
+      return s;} }],
   ['m07','球','Shade a sphere','Light from the upper left.','15–20', {
     layout:'A', rows:4, rowLabels:['一','二','三','四'],
     example:(i,c)=>sphere(c,i,'m07'+i), yours:(i,c)=>sphere(c,null,'m07y'+i) }],
@@ -322,16 +345,25 @@ const SPACE = [
     layout:'A', rows:2, example:(i,c)=>negSpace(SIL.branch,c,true,'s03'+i),
     yours:(i,c)=>negSpace(SIL.branch,c,false) }],
   ['s04','黑白','Notan','Two values only. Decide what is dark.','15', {
-    layout:'B', bare:true, field:(w,h)=>K.frames(w,3,2,{gap:30}).svg }],
+    layout:'B', bandH:300,
+    band:(w,h)=>cellGrid(w,h,2,1,4/3,40,(fw,fh,i)=>notanCell(fw,fh,i),260),
+    field:(w,h)=>cellGrid(w,h,2,2,4/3,40,(fw,fh)=>K.rect(0,0,fw,fh,{c:'var(--hair)'}),260) }],
   ['s05','三分','Thirds','Place the subject on a line, not the center.','15', {
-    layout:'B', bare:true, field:(w,h)=>K.frames(w,3,2,{gap:30,thirds:true}).svg }],
+    layout:'B', bandH:300,
+    band:(w,h)=>cellGrid(w,h,2,1,4/3,40,(fw,fh,i)=>thirdsCell(fw,fh,i),260),
+    field:(w,h)=>cellGrid(w,h,2,2,4/3,40,(fw,fh)=>thirdsCell(fw,fh,-1),260) }],
   ['s06','裁斷','Crop','Redraw each crop from the scene above.','20', {
     layout:'B', band:(w,h)=>scene(w,h),
     /* landscape crops of a landscape scene, 2x2 so they fill the field
        instead of huddling along its top edge */
-    field:(w,h)=>{const g=K.frames(w,2,2,{gap:40,ratio:0.75});
-      const blk=2*g.fh+40, off=Math.max(0,(h-blk)/2);
-      return `<g transform="translate(0 ${off.toFixed(0)})">${g.svg}</g>`;} }],
+    /* one crop worked through, three left open — a row of empty windows does
+       not say what "redraw each crop" means */
+    field:(w,h)=>cellGrid(w,h,2,2,0.75,40,(fw,fh,i)=>{
+      let s=K.rect(0,0,fw,fh,{c:'var(--hair)'});
+      if(i===0) s+=K.line(0,fh*0.76,fw,fh*0.76,{c:'var(--ink)',w:1.4})
+        +K.rect(fw*0.14,fh*0.28,fw*0.22,fh*0.48,{c:'var(--ink)',sw:1.6})
+        +K.ellipse(fw*0.56,fh*0.62,fw*0.13,fw*0.13,{c:'var(--ink)',w:1.6});
+      return s;}) }],
   /* the given mass is deliberately off-centre — balancing it is the drill, so
      this page is expected to fail a centring audit */
   ['s07','均衡','Balance','Add one shape to balance the frame.','10–15', {
@@ -347,34 +379,58 @@ const SPACE = [
 
 const FORM = [
   ['f01','一點透視','One-point box','Pull the front face back to the vanishing point.','15', {
-    layout:'B', bare:true, field:(w,h)=>onePoint(w,h,6) }],
+    layout:'B', bandH:300,
+    band:(w,h)=>band1(w,h),
+    field:(w,h)=>onePoint(w,h,6) }],
   ['f02','一點透視','Room','Draw the room you are standing in.','20', {
-    layout:'B', bare:true, field:(w,h)=>K.rays(w/2,h/2,w,h,10)
-      +K.rect(w/2-180,h/2-135,360,270,{c:'var(--ink)',sw:1.6})+K.vp(w/2,h/2,'VP') }],
+    layout:'B', bandH:300,
+    band:(w,h)=>bandRoom(w,h),
+    field:(w,h)=>K.rays(w/2,h/2,w,h,5)+K.rect(w/2-180,h/2-135,360,270,{c:'var(--ink)',sw:1.6})+K.vp(w/2,h/2,'VP') }],
   ['f03','一點透視','Corridor','Place the posts at equal steps.','20', {
-    layout:'B', bare:true, field:(w,h)=>corridor(w,h) }],
+    layout:'B', bandH:300,
+    band:(w,h)=>bandCorridor(w,h),
+    field:(w,h)=>corridor(w,h) }],
   ['f04','二點透視','Two-point box','Trace the guides. Then draw the same box with the guides ignored.','15–25', {
-    layout:'B', bare:true, field:(w,h)=>twoPoint(w,h,true) }],
+    layout:'B', bandH:300,
+    band:(w,h)=>band2(w,h,[{x:w*0.5,y0:h*0.46,y1:h*0.88,l:168,r:168}]),
+    field:(w,h)=>twoPoint(w,h,0,{preset:'box'}) }],
   ['f05','二點透視','Stacked boxes','Stack three. Keep every edge on its point.','20', {
-    layout:'B', bare:true, field:(w,h)=>twoPoint(w,h,false,{floor:true}) }],
+    layout:'B', bandH:300,
+    band:(w,h)=>band2(w,h,[{x:w*0.5,y0:h*0.66,y1:h*0.92,l:132,r:132},{x:w*0.5,y0:h*0.44,y1:h*0.66,l:112,r:112},{x:w*0.5,y0:h*0.24,y1:h*0.44,l:92,r:92}]),
+    field:(w,h)=>twoPoint(w,h,0,{preset:'floor'}) }],
   ['f06','二點透視','Block building','Add windows that shrink toward the points.','25', {
-    layout:'B', bare:true, field:(w,h)=>twoPoint(w,h,false,{mass:true}) }],
+    layout:'B', bandH:300,
+    band:(w,h)=>bandBuilding(w,h),
+    field:(w,h)=>twoPoint(w,h,0,{preset:'mass'}) }],
   ['f07','二點透視','Above and below','Two boxes over the horizon, two under.','20', {
-    layout:'B', bare:true, field:(w,h)=>twoPoint(w,h,false,{edges:4}) }],
+    layout:'B', bandH:300,
+    band:(w,h)=>band2(w,h,[{x:w*0.26,y0:h*0.46,y1:h*0.78,l:100,r:100},{x:w*0.74,y0:h*0.22,y1:h*0.32,l:100,r:100}]),
+    field:(w,h)=>twoPoint(w,h,0,{preset:'four'}) }],
   ['f08','三點透視','Worm&rsquo;s eye','The third point is above you.','20–25', {
-    layout:'B', bare:true, field:(w,h)=>threePoint(w,h,'up') }],
+    layout:'B', bandH:300,
+    band:(w,h)=>band3(w,h,'up'),
+    field:(w,h)=>threePoint(w,h,'up') }],
   ['f09','三點透視','Bird&rsquo;s eye','The third point is below you.','20–25', {
-    layout:'B', bare:true, field:(w,h)=>threePoint(w,h,'down') }],
+    layout:'B', bandH:300,
+    band:(w,h)=>band3(w,h,'down'),
+    field:(w,h)=>threePoint(w,h,'down') }],
   ['f10','回轉','Rotation','Turn the box in 15&deg; steps.','20', {
     layout:'A', rows:7, rowLabels:['0°','15°','30°','45°','60°','75°','90°'],
     example:(i,c)=>rotBox(c,i*15,true),
-    yours:(i,c)=>K.line(c/2,c*0.16,c/2,c*0.84,{c:'var(--guide-l)',w:1}) }],
+    yours:(i,c)=>{const b=K.boxPoints(c,i*15);
+      let g=K.line(c/2,c*0.14,c/2,c*0.86,{c:'var(--guide-l)',w:1});
+      let front=0; b.base.forEach(([,y],k)=>{if(y>b.base[front][1])front=k;});
+      for(const[k,j]of[[(front+3)%4,front],[front,(front+1)%4]])
+        g+=K.line(b.base[k][0],b.base[k][1],b.base[j][0],b.base[j][1],{c:'var(--guide)',w:1});
+      return g;} }],
   ['f11','楕圓','Ellipse degrees','Ellipses open as they drop below eye level.','15', {
     layout:'A', rows:5, rowLabels:['10°','20°','35°','50°','70°'],
     example:(i,c)=>{const d=[10,20,35,50,70][i];
       return K.line(c/2,10,c/2,c-10,{c:'var(--guide-l)'})
         + K.ellipse(c/2,c/2,c*0.36,c*0.36*Math.sin(d*Math.PI/180));},
-    yours:(i,c)=>K.line(c/2,10,c/2,c-10,{c:'var(--guide-l)'}) }],
+    yours:(i,c)=>{const d=[10,20,35,50,70][i], rx=c*0.36, ry=rx*Math.sin(d*Math.PI/180);
+      return K.line(c/2,10,c/2,c-10,{c:'var(--guide-l)'})
+        +K.rect(c/2-rx,c/2-ry,rx*2,ry*2,{c:'var(--guide)'});} }],
   ['f12','圓柱','Cylinders','Both ends share one axis.','15–20', {
     layout:'A', rows:3, cell:260, rowLabels:['立','臥','傾'],
     example:(i,c)=>cylAxis(c,i,true), yours:(i,c)=>cylAxisGuide(c,i) }],
@@ -388,8 +444,9 @@ const FORM = [
     layout:'A', rows:2, cell:365,
     example:(i,c)=>combined(c,i,true), yours:(i,c)=>combined(c,i,false) }],
   ['f16','積','Stacking','Balance four forms on each other.','20', {
-    layout:'B', bare:true, field:(w,h)=>K.line(0,h-90,w,h-90,{c:'var(--guide)'})
-      +K.rays(w/2,h*0.34,w,h,8)+K.vp(w/2,h*0.34,'VP') }],
+    layout:'B', bandH:300,
+    band:(w,h)=>bandStack(w,h),
+    field:(w,h)=>K.line(0,h-90,w,h-90,{c:'var(--guide)'})+K.rays(w/2,h*0.34,w,h,5)+K.vp(w/2,h*0.34,'VP') }],
   ['f17','斷面','Cross-sections','Slice the form. Show every section.','20', {
     layout:'A', rows:3, cell:260,
     example:(i,c)=>section(c,i,true), yours:(i,c)=>section(c,i,false) }],
@@ -400,17 +457,38 @@ const FORM = [
     layout:'A', rows:3, cell:260, rowLabels:['書','盞','箱'],
     example:(i,c)=>objBox(c,i,true), yours:(i,c)=>objBox(c,i,false) }],
   ['f20','綜合','Still life','Everything together. One page, no guides.','25+', {
-    layout:'B', bare:true, field:(w,h)=>K.line(0,h-140,w,h-140,{c:'var(--guide)'}) }],
+    /* the page stays blank on purpose; a thumbnail at the top gives the reader
+       a target without filling the sheet they are meant to use */
+    layout:'B', bandH:230, bandLabel:'REFERENCE',
+    band:(w,h)=>{const gy=h-34, x=w*0.5;
+      return K.line(w*0.22,gy,w*0.78,gy,{c:'var(--guide)',w:1})
+        + `<g transform="translate(${(x-250).toFixed(0)} ${(gy-150).toFixed(0)})">`
+        + K.isoBox(170,28,{filled:true,id:'f20box'}) + `</g>`
+        + `<g transform="translate(${(x-30).toFixed(0)} ${(gy-160).toFixed(0)})">`
+        + K.cylinderAxis(60,34,60,150,38,{filled:true,id:'f20cyl'}) + `</g>`
+        + K.ellipse(x+230,gy-44,44,44,{c:'var(--ink)',w:1.6});},
+    field:(w,h)=>K.line(0,h*0.72,w,h*0.72,{c:'var(--guide)'}) }],
 ];
 
 /* ---- small shape helpers used above ---- */
-function diagPairs(w,h,n,deg){const r=deg*Math.PI/180,len=Math.min(w/(n+1),h*0.8);let s='';
-  for(let i=0;i<n;i++){const x=40+i*(w-80)/n,y=h*0.15;
-    s+=K.dot(x,y)+K.dot(x+len*Math.cos(r),y+len*Math.sin(r)>0?y+len*Math.sin(r):y-len*Math.sin(r));}
+/* Each pair is centred in its own slot, so two dots read as one pair rather
+   than as a row of loose dots. `drawn` joins the first N. */
+function diagPairs(w,h,{cols,rows,deg,len,drawn=0,top=0,height}){
+  const r=deg*Math.PI/180,dx=Math.cos(r)*len,dy=Math.sin(r)*len;
+  const H=height??h, cw=w/cols, rh=H/rows; let s='',k=0;
+  for(let ri=0;ri<rows;ri++)for(let ci=0;ci<cols;ci++,k++){
+    const cx=cw*(ci+0.5), cy=top+rh*(ri+0.5);
+    const A=[cx-dx/2,cy-dy/2], B=[cx+dx/2,cy+dy/2];
+    if(k<drawn) s+=K.line(A[0],A[1],B[0],B[1],{c:'var(--ink)',w:1.6});
+    s+=K.dot(A[0],A[1],4.6)+K.dot(B[0],B[1],4.6);}
   return s;}
-function numberedScatter(w,h,n,seed){const r=K.rng(seed);let s='';
-  for(let i=0;i<n;i++){const x=40+r()*(w-80),y=40+r()*(h-80);
-    s+=K.dot(x,y,3.2)+`<text x="${(x+9).toFixed(1)}" y="${(y-8).toFixed(1)}" fill="var(--muted)" font-size="11" font-family="Inter,system-ui,sans-serif" font-weight="500">${i+1}</text>`;}
+function numberedScatter(w,h,n,seed,{joined=false,pad=40}={}){
+  const r=K.rng(seed);const pts=[];
+  for(let i=0;i<n;i++)pts.push([pad+r()*(w-2*pad),pad+r()*(h-2*pad)]);
+  let s='';
+  if(joined)s+=`<path d="${pts.map(([x,y],i)=>(i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)).join('')}" stroke="var(--ink)" stroke-width="1.6" fill="none"/>`;
+  for(const [i,[x,y]] of pts.entries())
+    s+=K.dot(x,y,4.2)+`<text x="${(x+10).toFixed(1)}" y="${(y-9).toFixed(1)}" fill="var(--muted)" font-size="12.5" font-family="Inter,system-ui,sans-serif" font-weight="500">${i+1}</text>`;
   return s;}
 function arcSets(w,h,cols,rows,filled){let s='';const cw=w/cols,ch=h/rows;
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=c*cw+cw*0.15,y=r*ch+ch*0.5,sp=cw*0.7;
@@ -441,8 +519,10 @@ function stepBarExample(w,h,n){const bw=w/n,bh=160,y=(h-bh)/2;let s='';
       +K.hatch(bw,bh,{angle:45,spacing:Math.max(3,10-i*1.2),width:1+i*0.25,id:'sb'+i})+`</g>`;
     s+=K.rect(i*bw,y,bw,bh,{c:'var(--hair)'});}
   return s;}
-function stepBarField(w,h,n){const bw=w/n;let s='';
-  for(let i=1;i<n;i++)s+=K.line(i*bw,0,i*bw,h,{c:'var(--hair)',w:1});
+function stepBarField(w,h,n){const bw=w/n, gap=40, bh=(h-gap)/2; let s='';
+  for(const top of [0,bh+gap]){
+    s+=K.rect(0,top,w,bh,{c:'var(--hair)'});
+    for(let i=1;i<n;i++)s+=K.line(i*bw,top,i*bw,top+bh,{c:'var(--hair)',w:1});}
   return s;}
 function gradBar(w,h,id){const y=40;let s='';
   for(let i=0;i<24;i++){const t=i/23,sp=12-t*9,wd=0.25+t*1.9;
@@ -546,13 +626,135 @@ function negSpace(sil,c,filled,id){const d=sil(c);
 /* Every size is derived from the BAND height, not the page width — sizing a
    circle by width and placing it by height is how the old scene spilled out
    of its band. */
+/* 黑白 / 三分: the EXAMPLE has to show a decided composition, not an empty
+   frame with guides on it (fix spec v0.3 §2 三 餘白). */
+function notanCell(fw,fh,i){
+  const F={fill:'var(--ink)',c:'none',w:0};
+  let s=K.rect(0,0,fw,fh,{c:'var(--hair)'});
+  if(i===0)  // a ridge against open sky, with the sun left light
+    s+=`<path d="M0 ${fh} L0 ${fh*0.62} L${fw*0.34} ${fh*0.40} L${fw*0.58} ${fh*0.56} L${fw} ${fh*0.30} L${fw} ${fh}Z" fill="var(--ink)"/>`
+      +K.ellipse(fw*0.70,fh*0.19,fw*0.11,fw*0.11,{c:'var(--ink)',w:1.4});
+  else      // a vessel read as one dark mass
+    s+=`<path d="M${fw*0.32} ${fh*0.34}C${fw*0.06} ${fh*0.50} ${fw*0.10} ${fh*0.86} ${fw*0.50} ${fh*0.88}C${fw*0.90} ${fh*0.86} ${fw*0.94} ${fh*0.50} ${fw*0.68} ${fh*0.34}Z" fill="var(--ink)"/>`
+      +K.rect(fw*0.30,fh*0.26,fw*0.40,fh*0.08,{c:'none',sw:0,fill:'var(--ink)'});
+  void F; return s;
+}
+/* done = -1 blank, 0 subject on the left vertical third, 1 on the right —
+   two worked cells that differ, so the band shows a choice being made */
+function thirdsCell(fw,fh,done){
+  let s=K.rect(0,0,fw,fh,{c:'var(--hair)'});
+  for(let i=1;i<3;i++) s+=K.line(fw*i/3,0,fw*i/3,fh,{c:'var(--guide-l)'})
+    +K.line(0,fh*i/3,fw,fh*i/3,{c:'var(--guide-l)'});
+  if(done<0) return s;
+  const gy=done===0?fh*2/3:fh/3, x=done===0?fw/3:fw*2/3, r=fw*0.14;
+  s+=K.line(0,gy,fw,gy,{c:'var(--ink)',w:1.4})
+    +K.ellipse(x,gy-r,r,r,{c:'var(--ink)',w:1.6});
+  const bx=done===0?fw*0.58:fw*0.14;
+  s+=K.rect(bx,gy-fh*0.17,fw*0.20,fh*0.17,{c:'var(--ink)',sw:1.4});
+  return s;
+}
+/* Sizes the cell against BOTH axes. Taking the width alone put a 581px-tall
+   cell in a 300px band and ran the grid off the page. */
+/* Sizes the cell against BOTH axes — taking the width alone put a 581px-tall
+   cell in a 300px band. gapX is separate from gapY so a column of 3:4 cells
+   can be spread across a wide field instead of huddling in the middle. */
+function cellGrid(w,h,cols,rows,ratio,gap,draw,gapX){
+  const gx=gapX??gap;
+  let fw=(w-gx*(cols-1))/cols, fh=fw*ratio;
+  const maxH=(h-gap*(rows-1))/rows;
+  if(fh>maxH){fh=maxH;fw=fh/ratio;}
+  const left=(w-(cols*fw+(cols-1)*gx))/2, top=(h-(rows*fh+(rows-1)*gap))/2;
+  let s='',k=0;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++,k++)
+    s+=`<g transform="translate(${(left+c*(fw+gx)).toFixed(1)} ${(top+r*(fh+gap)).toFixed(1)})">${draw(fw,fh,k)}</g>`;
+  return s;
+}
 function scene(w,h){const gy=h-20,u=h*0.34;
   return K.line(0,gy,w,gy,{c:'var(--guide)'})
     +K.rect(w*0.14,gy-u*1.7,u*1.2,u*1.7,{c:'var(--ink)',sw:1.4})
     +K.ellipse(w*0.40,gy-u*0.55,u*0.55,u*0.55,{c:'var(--ink)',w:1.4})
     +K.rect(w*0.58,gy-u*1.1,u*1.6,u*1.1,{c:'var(--ink)',sw:1.4})
-    +K.ellipse(w*0.88,gy-u*2.1,u*0.40,u*0.40,{c:'var(--guide)',w:1.2});}
-function onePoint(w,h,n){const vx=w/2,vy=h*0.42;let s=K.rays(vx,vy,w,h,12);
+    +K.ellipse(w*0.88,gy-u*2.1,u*0.40,u*0.40,{c:'var(--ink)',w:1.4});}
+/* ---- 四 形: EXAMPLE bands ------------------------------------------------
+   Every perspective drill now opens with a box that is actually built from its
+   vanishing points (K.persBox*), so the band shows the result the field asks
+   for. The vanishing points sit outside the band so the convergence stays
+   gentle at this size. */
+const bandHorizon=(w,h)=>({hy:h*0.34,vpL:[-260,h*0.34],vpR:[w+260,h*0.34]});
+function band2(w,h,boxes){
+  const {hy,vpL,vpR}=bandHorizon(w,h);
+  let s=K.line(0,hy,w,hy,{c:'var(--guide-l)',w:1});
+  for(const b of boxes) s+=K.persBox2(vpL,vpR,b.x,b.y0,b.y1,b.x-b.l,b.x+b.r,hy);
+  return s;
+}
+function band1(w,h){
+  const vp=[w*0.5,h*0.28];
+  let s=K.vp(vp[0],vp[1],'VP');
+  for(const x of [w*0.14,w*0.62])
+    s+=K.persBox1(vp,[x,h*0.50,150,h*0.34],0.45);
+  return s;
+}
+function bandRoom(w,h){
+  const vp=[w*0.5,h*0.46],bw=250,bh=108;
+  const r=[w*0.5-bw/2,h*0.46-bh/2,bw,bh];
+  let s='';
+  for(const c of [[r[0],r[1]],[r[0]+bw,r[1]],[r[0]+bw,r[1]+bh],[r[0],r[1]+bh]]){
+    // walk out from the vanishing point only as far as the band allows
+    const dx=c[0]-vp[0], dy=c[1]-vp[1];
+    const k=Math.min((dy<0?(4-c[1])/dy:(h-4-c[1])/dy), (dx<0?(4-c[0])/dx:(w-4-c[0])/dx));
+    s+=K.line(c[0],c[1],c[0]+dx*k,c[1]+dy*k,{c:'var(--ink)',w:1.6});}
+  s+=K.rect(r[0],r[1],bw,bh,{c:'var(--ink)',sw:1.6});
+  // a door on the right wall, its edges running to the same point
+  const d0=[r[0]+bw+66,r[1]+bh+28],d1=[r[0]+bw+66,r[1]+bh-46];
+  s+=K.line(d0[0],d0[1],d1[0],d1[1],{c:'var(--ink)',w:1.6})
+    +K.line(d0[0]+52,d0[1]+22,d1[0]+52,d1[1]-30,{c:'var(--ink)',w:1.6})
+    +K.line(d1[0],d1[1],d1[0]+52,d1[1]-30,{c:'var(--ink)',w:1.6})
+    +K.line(d0[0],d0[1],d0[0]+52,d0[1]+22,{c:'var(--ink)',w:1.6});
+  return s+K.vp(vp[0],vp[1],'VP');
+}
+function bandCorridor(w,h){
+  const vp=[w*0.5,h*0.5];let s=K.vp(vp[0],vp[1],'VP');
+  for(const t of [0.12,0.88])s+=K.line(vp[0],vp[1],t*w,0,{c:'var(--guide-l)'})
+    +K.line(vp[0],vp[1],t*w,h,{c:'var(--guide-l)'});
+  // five posts at equal steps in space, which foreshorten toward the point
+  for(let i=0;i<4;i++){const k=0.10+i*0.21;
+    for(const side of [-1,1]){
+      const x=vp[0]+side*(w*0.38)*(1-k);
+      const yT=vp[1]-(h*0.46)*(1-k), yB=vp[1]+(h*0.46)*(1-k);
+      s+=K.line(x,yT,x,yB,{c:'var(--ink)',w:1.6});}}
+  return s;
+}
+function bandBuilding(w,h){
+  const {hy,vpL,vpR}=bandHorizon(w,h);
+  let s=K.line(0,hy,w,hy,{c:'var(--guide-l)',w:1});
+  const x=w*0.5,y0=h*0.14,y1=h*0.92,xl=x-170,xr=x+170;
+  s+=K.persBox2(vpL,vpR,x,y0,y1,xl,xr,hy);
+  // window bands: horizontal runs that shrink toward each point
+  for(const t of [0.3,0.52,0.74]){
+    const yF=y0+(y1-y0)*t;
+    s+=K.line(xl,K.atX(vpL,[x,yF],xl)[1],x,yF,{c:'var(--ink)',w:1})
+      +K.line(x,yF,xr,K.atX(vpR,[x,yF],xr)[1],{c:'var(--ink)',w:1});}
+  return s;
+}
+function band3(w,h,dir){
+  const hy=h*(dir==='up'?0.86:0.14), vpL=[-200,hy], vpR=[w+200,hy];
+  const vpV=[w*0.5,dir==='up'?-h*2.4:h*3.4];
+  let s=K.line(0,hy,w,hy,{c:'var(--guide-l)',w:1});
+  const F0=[w*0.5,dir==='up'?h*0.12:h*0.30], F1=[w*0.5,dir==='up'?h*0.70:h*0.88];
+  s+=K.persBox3(vpL,vpR,vpV,F0,F1,[w*0.24,F0[1]],[w*0.76,F0[1]]);
+  return s;
+}
+function bandStack(w,h){
+  const {hy,vpL,vpR}=bandHorizon(w,h);
+  let s=K.line(0,hy,w,hy,{c:'var(--guide-l)',w:1});
+  const x=w*0.5;
+  s+=K.persBox2(vpL,vpR,x,h*0.56,h*0.94,x-130,x+130,hy);
+  s+=K.persBox2(vpL,vpR,x,h*0.30,h*0.56,x-96,x+96,hy);
+  s+=K.cylinderAxis(x,h*0.30,x,h*0.08,54,{filled:true,id:'bst'});
+  return s;
+}
+
+function onePoint(w,h,n){const vx=w/2,vy=h*0.42;let s=K.rays(vx,vy,w,h,5);
   for(let i=0;i<n;i++){const x=60+i*(w-200)/n,y=h*0.62,bw=110,bh=84;
     s+=K.rect(x,y,bw,bh,{c:'var(--ink)',sw:1.6});}
   return s+K.vp(vx,vy,'VP');}
@@ -560,18 +762,36 @@ function corridor(w,h){const vx=w/2,vy=h*0.45;let s='';
   for(const t of [0.1,0.3,0.7,0.9])s+=K.line(vx,vy,t*w,h,{c:'var(--guide-l)'})+K.line(vx,vy,t*w,0,{c:'var(--guide-l)'});
   s+=K.rect(w*0.1,h*0.45,26,h*0.42,{c:'var(--ink)',sw:1.6});
   return s+K.vp(vx,vy,'VP');}
-function twoPoint(w,h,example,{floor,mass,edges}={}){const hy=h*0.36;
+/* The practice field: horizon, both points, and the vertical edges the reader
+   builds on. `complete` finishes one box so the field is not a blank sheet
+   with a single line on it (fix spec v0.3). */
+function twoPoint(w,h,_legacy,{preset='box'}={}){
+  const hy=h*0.26, vpL=[6,hy], vpR=[w-6,hy];
   let s=K.horizon(w,hy)+K.vp(6,hy,'VP · L')+K.vp(w-6,hy,'VP · R');
-  const mk=(x,y0,y1)=>{let g=K.line(x,y0,x,y1,{c:'var(--ink)',w:1.6});
-    for(const y of [y0,y1]){g+=K.line(6,hy,x,y,{c:'var(--guide-l)'})+K.line(w-6,hy,x,y,{c:'var(--guide-l)'});}
+  const guides=(x,y0,y1)=>{let g='';
+    for(const y of [y0,y1]) g+=K.line(6,hy,x,y,{c:'var(--guide-l)'})+K.line(w-6,hy,x,y,{c:'var(--guide-l)'});
     return g;};
-  if(edges){[[w*0.22,hy-150,hy-30],[w*0.42,hy-120,hy-16],[w*0.62,hy+40,hy+190],[w*0.82,hy+60,hy+230]]
-    .forEach(([x,a,b])=>{s+=mk(x,a,b);});return s;}
-  if(floor){s+=mk(w*0.42,hy+60,hy+260);return s;}
-  if(mass){s+=mk(w*0.46,hy-180,hy+240);return s;}
-  s+=mk(w*0.44,hy-140,hy+170);
-  if(example)s+=K.rect(w*0.6,hy+230,150,110,{c:'var(--ink)',sw:1.6});
-  return s;}
+  const SETS={
+    box:   [{x:w*0.46,y0:hy+80,y1:hy+390,l:150,r:150},
+            {x:w*0.16,y0:hy+180,y1:hy+440,l:0,r:0},
+            {x:w*0.80,y0:hy+140,y1:hy+410,l:0,r:0}],
+    floor: [{x:w*0.44,y0:hy+180,y1:hy+400,l:140,r:140,complete:true},
+            {x:w*0.44,y0:hy+40,y1:hy+180,l:0,r:0},
+            {x:w*0.44,y0:hy-80,y1:hy+40,l:0,r:0}],
+    mass:  [{x:w*0.46,y0:hy-150,y1:hy+330,l:170,r:170}],
+    four:  [{x:w*0.20,y0:hy-150,y1:hy-30,l:0,r:0},
+            {x:w*0.42,y0:hy-120,y1:hy-20,l:0,r:0},
+            {x:w*0.60,y0:hy+60,y1:hy+260,l:0,r:0},
+            {x:w*0.82,y0:hy+90,y1:hy+330,l:0,r:0}],
+  };
+  for(const e of SETS[preset]||SETS.box){
+    s+=guides(e.x,e.y0,e.y1);
+    if(e.complete) s+=K.persBox2(vpL,vpR,e.x,e.y0,e.y1,e.x-e.l,e.x+e.r,hy);
+    else s+=K.line(e.x,e.y0,e.x,e.y1,{c:'var(--ink)',w:1.6});
+  }
+  return s;
+}
+
 function threePoint(w,h,dir){const hy=dir==='up'?h*0.72:h*0.28,ty=dir==='up'?-h*0.5:h*1.5;
   let s=K.horizon(w,hy)+K.vp(6,hy,'VP · L')+K.vp(w-6,hy,'VP · R');
   const x=w*0.48,y0=dir==='up'?hy-320:hy+60,y1=dir==='up'?hy-40:hy+340;
